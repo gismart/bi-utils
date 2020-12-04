@@ -1,0 +1,11 @@
+.vscode
+.idea
+.env
+__pycache__
+.ipynb_checkpoints
+/.pytest_cache
+.DS_Store
+.coverage
+redshift.json
+postgres.json
+rds.json
