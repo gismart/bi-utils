@@ -1,6 +1,6 @@
 # BI utils
 
-Perfectly suits to your project!
+Perfectly suits your project!
 
 ### Installation
 
@@ -15,7 +15,7 @@ Add `--upgrade` option to update existing package to a new version
 Specify package link in your `requirements.txt`:
 
 ```txt
-git+https://github.com/gismart/bi-utils@0.2#egg=bi-utils
+git+https://github.com/gismart/bi-utils@0.2#egg=bi-utils-gismart
 ```
 
 ### Usage
@@ -29,5 +29,5 @@ If you have your credentials on AWS add the following environment variables to u
 ### Running tests
 
 ```bash
-pytest tests
+pytest
 ```
