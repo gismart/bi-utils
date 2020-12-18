@@ -1,5 +1,6 @@
 import os
 import glob
+import shutil
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterator, Sequence, Optional, Union
@@ -139,6 +140,7 @@ def download_data(
         parse_dates=parse_dates,
         parse_bools=parse_bools,
         dtype=dtype,
+        temp_dir=temp_path,
     )
     if chunking:
         return chunks
@@ -174,22 +176,27 @@ def _read_chunks(
     parse_dates: Optional[Sequence[str]] = None,
     parse_bools: Optional[Sequence[str]] = None,
     dtype: Optional[dict] = None,
+    temp_dir: Optional[str] = None,
 ) -> Iterator[pd.DataFrame]:
     boolean_values = {'t': True, 'f': False}
     converters = {
         col: lambda value: boolean_values.get(value, pd.NA) for col in parse_bools
     }
-    for i, filename in enumerate(filenames):
-        chunk = pd.read_csv(
-            filename,
-            na_values=[''],
-            converters=converters,
-            keep_default_na=False,
-            parse_dates=parse_dates,
-            sep=separator,
-            dtype=dtype,
-            low_memory=False,
-        )
-        yield chunk
-        logger.debug(f'Loaded chunk #{i + 1}')
-        os.remove(filename)
+    try:
+        for i, filename in enumerate(filenames):
+            chunk = pd.read_csv(
+                filename,
+                na_values=[''],
+                converters=converters,
+                keep_default_na=False,
+                parse_dates=parse_dates,
+                sep=separator,
+                dtype=dtype,
+                low_memory=False,
+            )
+            yield chunk
+            logger.debug(f'Loaded chunk #{i + 1}')
+            os.remove(filename)
+    finally:
+        if temp_dir:
+            shutil.rmtree(temp_dir, ignore_errors=True)
