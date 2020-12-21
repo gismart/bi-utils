@@ -1,5 +1,6 @@
 import os
 import glob
+import shutil
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterator, Sequence, Optional, Union
@@ -23,12 +24,13 @@ def upload_csv(
     columns: Optional[Sequence] = None,
     delete_s3_after: bool = True,
     secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
 ) -> None:
     '''Upload csv file to S3 and copy to Redshift'''
     if not columns:
         columns = files.csv_columns(csv_path, separator=separator)
     table_columns = f'{schema}.{table} ({",".join(columns)})'
-    with connection.get_redshift(secret_id) as redshift_locopy:
+    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         redshift_locopy.load_and_copy(
             local_file=csv_path,
             s3_bucket=bucket,
@@ -52,11 +54,12 @@ def download_csv(
     bucket_dir: str = 'dwh/temp',
     delete_s3_after: bool = True,
     secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
 ) -> Sequence[str]:
     '''Copy data from RedShift to S3 and download csv files up to 6.2 GB'''
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
-    with connection.get_redshift(secret_id) as redshift_locopy:
+    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         redshift_locopy.unload_and_copy(
             query=query,
             s3_bucket=bucket,
@@ -85,6 +88,7 @@ def upload_data(
     columns: Optional[Sequence] = None,
     remove_csv: bool = False,
     secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
 ) -> None:
     '''Save data to csv and upload it to RedShift via S3'''
     filename = os.path.basename(csv_path)
@@ -102,6 +106,7 @@ def upload_data(
         bucket_dir=bucket_dir,
         columns=columns,
         secret_id=secret_id,
+        database=database,
     )
     if remove_csv:
         os.remove(csv_path)
@@ -120,6 +125,7 @@ def download_data(
     dtype: Optional[dict] = None,
     chunking: bool = False,
     secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     '''Download data from Redshift via S3'''
     dtype = dtype or {}
@@ -132,6 +138,7 @@ def download_data(
         bucket=bucket,
         bucket_dir=bucket_dir,
         secret_id=secret_id,
+        database=database,
     )
     chunks = _read_chunks(
         filenames,
@@ -139,6 +146,7 @@ def download_data(
         parse_dates=parse_dates,
         parse_bools=parse_bools,
         dtype=dtype,
+        temp_dir=temp_path,
     )
     if chunking:
         return chunks
@@ -155,12 +163,13 @@ def delete(
     table: str,
     schema: str,
     secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
     **equal_conditions: Any,
 ) -> None:
     '''Delete data from `table` in `schema` with keyword arguments `equal_conditions`'''
     if not equal_conditions:
         raise ValueError('Pass at least 1 equal condition as keyword argument')
-    with connection.connect(schema, secret_id=secret_id) as conn:
+    with connection.connect(schema, secret_id=secret_id, database=database) as conn:
         with conn.cursor() as cursor:
             where = sql.build_where(**equal_conditions)
             query = f'DELETE FROM {schema}.{table} {where}'
@@ -174,22 +183,27 @@ def _read_chunks(
     parse_dates: Optional[Sequence[str]] = None,
     parse_bools: Optional[Sequence[str]] = None,
     dtype: Optional[dict] = None,
+    temp_dir: Optional[str] = None,
 ) -> Iterator[pd.DataFrame]:
     boolean_values = {'t': True, 'f': False}
     converters = {
         col: lambda value: boolean_values.get(value, pd.NA) for col in parse_bools
     }
-    for i, filename in enumerate(filenames):
-        chunk = pd.read_csv(
-            filename,
-            na_values=[''],
-            converters=converters,
-            keep_default_na=False,
-            parse_dates=parse_dates,
-            sep=separator,
-            dtype=dtype,
-            low_memory=False,
-        )
-        yield chunk
-        logger.debug(f'Loaded chunk #{i + 1}')
-        os.remove(filename)
+    try:
+        for i, filename in enumerate(filenames):
+            chunk = pd.read_csv(
+                filename,
+                na_values=[''],
+                converters=converters,
+                keep_default_na=False,
+                parse_dates=parse_dates,
+                sep=separator,
+                dtype=dtype,
+                low_memory=False,
+            )
+            yield chunk
+            logger.debug(f'Loaded chunk #{i + 1}')
+            os.remove(filename)
+    finally:
+        if temp_dir:
+            shutil.rmtree(temp_dir, ignore_errors=True)

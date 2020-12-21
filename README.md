@@ -15,7 +15,7 @@ Add `--upgrade` option to update existing package to a new version
 Specify package link in your `requirements.txt`:
 
 ```txt
-git+https://github.com/gismart/bi-utils@0.2#egg=bi-utils-gismart
+git+https://github.com/gismart/bi-utils@0.2.1#egg=bi-utils-gismart
 ```
 
 ### Usage

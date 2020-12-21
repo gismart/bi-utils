@@ -2,6 +2,7 @@ import json
 import boto3
 import psycopg2
 import sqlalchemy as sa
+from typing import Optional
 
 from ..logger import get_logger
 from .locopy import locopy
@@ -23,14 +24,17 @@ def get_creds(secret_id: str = 'prod/redshift/analytics') -> dict:
     return creds
 
 
-def get_redshift(secret_id: str = 'prod/redshift/analytics') -> locopy.Redshift:
+def get_redshift(
+    secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
+) -> locopy.Redshift:
     '''Get locopy redshift connection'''
     creds = get_creds(secret_id)
     redshift = locopy.Redshift(
         dbapi=psycopg2,
         host=creds.get('host'),
         port=creds.get('port'),
-        dbname=creds.get('dbname'),
+        dbname=database or creds.get('dbname'),
         user=creds.get('username'),
         password=creds.get('password'),
     )
@@ -41,13 +45,14 @@ def get_redshift(secret_id: str = 'prod/redshift/analytics') -> locopy.Redshift:
 def create_engine(
     secret_id: str = 'prod/redshift/analytics',
     drivername: str = 'postgresql+psycopg2',
+    database: Optional[str] = None,
 ) -> sa.engine.Engine:
     '''Create AWS connection engine'''
     creds = get_creds(secret_id=secret_id)
     conn_str = sa.engine.url.URL(
         host=creds.get('host'),
         port=creds.get('port'),
-        database=creds.get('dbname'),
+        database=database or creds.get('dbname'),
         username=creds.get('username'),
         password=creds.get('password'),
         drivername=drivername,
@@ -60,13 +65,14 @@ def create_engine(
 def connect(
     schema: str,
     secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
 ) -> psycopg2.extensions.connection:
     '''Connect to `schema` via psycopg2'''
     creds = get_creds(secret_id=secret_id)
     conn = psycopg2.connect(
         host=creds.get('host'),
         port=creds.get('port'),
-        dbname=creds.get('dbname'),
+        dbname=database or creds.get('dbname'),
         user=creds.get('username'),
         password=creds.get('password'),
         options=f'--search_path={schema}',
