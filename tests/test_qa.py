@@ -24,7 +24,7 @@ def test_empty_df_negative(sample_data):
 
 
 @pytest.mark.parametrize(
-    'df,unique_index,exp_status',
+    'df, unique_index, expected_status',
     [
         (
             pd.DataFrame({
@@ -60,12 +60,12 @@ def test_empty_df_negative(sample_data):
         ),
     ]
 )
-def test_unique(df, unique_index, exp_status):
-    assert qa.unique_index_test(df, unique_index) == exp_status
+def test_unique(df, unique_index, expected_status):
+    assert qa.unique_index_test(df, unique_index) == expected_status
 
 
 @pytest.mark.parametrize(
-    'df,thresholds,exp_status',
+    'df, thresholds, expected_status',
     [
         (
             pd.DataFrame({
@@ -85,12 +85,12 @@ def test_unique(df, unique_index, exp_status):
         ),
     ]
 )
-def test_thresholds(df, thresholds, exp_status):
-    assert qa.thresholds_test(df, thresholds) == exp_status
+def test_thresholds(df, thresholds, expected_status):
+    assert qa.thresholds_test(df, thresholds) == expected_status
 
 
 @pytest.mark.parametrize(
-    'df,q,exp_status',
+    'df, q, expected_status',
     [
         (
             pd.DataFrame({
@@ -118,12 +118,12 @@ def test_thresholds(df, thresholds, exp_status):
         ),
     ]
 )
-def test_quantiles(df, q, exp_status):
-    assert qa.quantile_test(df, q) == exp_status
+def test_quantiles(df, q, expected_status):
+    assert qa.quantile_test(df, q) == expected_status
 
 
 @pytest.mark.parametrize(
-    'df,q,exp_status',
+    'df, q, expected_status',
     [
         (
             pd.DataFrame({
@@ -159,8 +159,8 @@ def test_quantiles(df, q, exp_status):
         )
     ]
 )
-def test_queries(df, q, exp_status):
-    assert qa.query_test(df, q) == exp_status
+def test_queries(df, q, expected_status):
+    assert qa.query_test(df, q) == expected_status
 
 
 def test_df_test_nullable(sample_data):

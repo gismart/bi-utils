@@ -30,7 +30,7 @@ def test_queue_exporter_export_df(data):
 
 
 @pytest.mark.parametrize(
-    'table,schema,s3_bucket,s3_bucket_dir',
+    'table, schema, s3_bucket, s3_bucket_dir',
     [
         ('ltv_subscription_dd', None, 'gismart-analytics', None),
         (None, 'data_analytics_sandbox', 'gismart-analytics', 'dwh/temp'),
