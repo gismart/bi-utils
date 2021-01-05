@@ -6,14 +6,16 @@ logger = get_logger(__name__)
 
 
 def passert(passed: bool, message: str) -> int:
-    if not passed:
+    if passed:
+        return 0
+    elif not passed:
         logger.warning(msg=message)
         return 1
     else:
-        return 0
+        logger.warning(msg=f"Unexpected value {passed} in passert function")
 
 
-def thresholds_test(df, thresholds):
+def thresholds_test(df: pd.DataFrame(), thresholds: Dict) -> int:
     failcount = 0
     if thresholds is not None:
         for c_tuple in thresholds:
@@ -27,7 +29,7 @@ def thresholds_test(df, thresholds):
     return failcount
 
 
-def quantile_test(df, max_quantile):
+def quantile_test(df: pd.DataFrame(), max_quantile: Dict) -> int:
     failcount = 0
     if max_quantile is not None:
         for c in max_quantile:
@@ -42,18 +44,19 @@ def quantile_test(df, max_quantile):
     return failcount
 
 
-def query_test(df, verify_query):
+def query_test(df: pd.DataFrame(), verify_query: List) -> int:
     failcount = 0
     if verify_query is not None:
         for q in verify_query:
             n_compliant_rows = df.query(q).shape[0]
+            df_len = df.shape[0]
             failcount += passert(
-                n_compliant_rows == df.shape[0],
-                f'Found {n_compliant_rows} rows incompliant with {q}')
+                n_compliant_rows == df_len,
+                f'Found {df_len - n_compliant_rows} rows incompliant with {q}')
     return failcount
 
 
-def unique_index_test(df, unique_index):
+def unique_index_test(df: pd.DataFrame(), unique_index: List) -> int:
     failcount = 0
     if unique_index is not None:
         failcount += passert(

@@ -23,6 +23,28 @@ def test_empty_df_negative(df=pd.DataFrame({1: [3, 4], 2: [1, 2]})):
     assert qa.df_test(df) == 0
 
 
+@pytest.mark.parametrize('df, unique_index, exp_status', [
+    (pd.DataFrame({
+        'country': ['US', 'US', 'CN', 'CN'],
+        'payment_number': [1, 2, 3, 1]
+    }), ['country', 'payment_number'], 0),
+    (pd.DataFrame({
+        'country': ['US', 'US', 'CN', 'CN'],
+        'payment_number': [1, 2, 3, 3]
+    }), ['country', 'payment_number'], 1),
+    (pd.DataFrame({
+        'country': ['US', 'US', 'CN', 'CN'],
+        'payment_number': [1, 2, 3, 1]
+    }), ['payment_number'], 1),
+    (pd.DataFrame({
+        'country': ['US', 'US', 'CN', 'CN'],
+        'payment_number': [1, 2, 3, np.nan]
+    }), ['payment_number'], 0),
+])
+def test_unique(df, unique_index, exp_status):
+    assert qa.unique_index_test(df, unique_index) == exp_status
+
+
 @pytest.mark.parametrize('df, thresholds, exp_status', [
     (pd.DataFrame({
         'conv_1': [0.5, 1.01],
