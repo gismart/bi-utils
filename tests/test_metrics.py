@@ -5,7 +5,7 @@ from bi_utils import metrics
 
 
 @pytest.mark.parametrize(
-    'epsilon,expected_mape',
+    'epsilon, expected_mape',
     [
         (1, 0.23582490978914566),
         (1e-3, 37.387087575859525),
