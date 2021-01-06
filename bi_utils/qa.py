@@ -3,16 +3,17 @@ from typing import Any, Dict, Hashable, Optional, Sequence, Tuple, Union
 
 from .logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
 def df_test(
     df: pd.DataFrame,
     strict: bool = False,
+    ai: bool = True,
     nullable_cols: Optional[Sequence[Hashable]] = None,
     unique_index: Optional[Sequence[Hashable]] = None,
-    thresholds: Optional[Dict[Any, Tuple[Union[int, float], Union[int, float]]]] = None,
+    thresholds: Optional[Dict[Any, Tuple[Union[int, float],
+                                         Union[int, float]]]] = None,
     max_quantiles: Optional[Dict[Any, Tuple[float, int]]] = None,
     verify_queries: Optional[Sequence[str]] = None,
 ) -> int:
@@ -25,8 +26,10 @@ def df_test(
     unique_index -- list of columns implied to be a unique row identifier
     thresholds -- columns with numeric values that should be within the specified [min, max] range
     max_quantiles -- dict of positive numeric columns {column_name: [Q, K]} that should not
-                         contain values that are K+ times greater then quantile Q (float)
-    verify_queries -- list of positive requirements (queries) all rows should comply with
+                    contain values that are K+ times greater then quantile Q (float)
+    verify_queries -- list of negative requirements (queries) all rows should comply with.
+                    F.e. "current_date < birth_date" will trigger an alert (warning or ValueError)
+                    if any rows where current_date < birth_date are found in the dataset.
     '''
 
     failcount = 0
@@ -43,9 +46,9 @@ def df_test(
         f'Found NA in columns: {nans[nans > 0]}',
     )
 
-    failcount += thresholds_test(df, thresholds)
-    failcount += quantile_test(df, max_quantiles)
-    failcount += query_test(df, verify_queries)
+    failcount += thresholds_test(df, thresholds, ai=ai)
+    failcount += quantile_test(df, max_quantiles, ai=ai)
+    failcount += query_test(df, verify_queries, ai=ai)
     failcount += unique_index_test(df, unique_index)
     if strict and failcount > 0:
         raise ValueError(f'Data qa failcount: {failcount}, force exit since in strict mode')
@@ -55,63 +58,91 @@ def df_test(
 def thresholds_test(
     df: pd.DataFrame,
     thresholds: Optional[Dict[Hashable, Tuple[Union[int, float], Union[int, float]]]],
+    ai: bool = True,
 ) -> int:
     failcount = 0
     if thresholds is None:
         thresholds = {}
     for col, (min_threshold, max_threshold) in thresholds.items():
-        failcount += _passert(
-            df[col].min() >= min_threshold,
-            f'Found {col} value below {min_threshold}',
-        )
-        failcount += _passert(
-            df[col].max() <= max_threshold,
-            f'Found {col} value above {max_threshold}',
-        )
+        failcount += _check(violations=df[df[col] < min_threshold],
+                            condition_message=f'{col} is below {min_threshold}',
+                            ai=ai)
+        failcount += _check(violations=df[df[col] > max_threshold],
+                            condition_message=f'{col} is above {max_threshold}',
+                            ai=ai)
     return failcount
 
 
 def quantile_test(
     df: pd.DataFrame,
     max_quantiles: Optional[Dict[Hashable, Tuple[float, int]]],
+    ai: bool = True,
 ) -> int:
     failcount = 0
     if max_quantiles is None:
         max_quantiles = {}
     for col, (quantile, max_multiplier) in max_quantiles.items():
-        q_threshold = df[col].quantile(quantile)
+        q_threshold = df[col].quantile(quantile) * max_multiplier
         if q_threshold <= 0:
-            logger.warning(f'Skipping {col} max_quantiles because threshold <= 0')
+            logger.warning(
+                f'Skipping {col} max_quantiles because threshold <= 0')
             continue
-        failcount += _passert(
-            (df[col].max() / q_threshold) <= max_multiplier,
-            f'Found {col} value above {q_threshold}',
-        )
+        failcount += _check(violations=df[df[col] > q_threshold],
+                            condition_message=f'{col} is above {q_threshold}',
+                            ai=ai)
     return failcount
 
 
-def query_test(df: pd.DataFrame, verify_queries: Optional[Sequence[str]]) -> int:
+def query_test(df: pd.DataFrame,
+               verify_queries: Optional[Sequence[str]],
+               ai: bool = True) -> int:
     failcount = 0
     if verify_queries is None:
         verify_queries = []
     for q in verify_queries:
-        n_compliant_rows = df.query(q).shape[0]
-        df_len = df.shape[0]
-        failcount += _passert(
-            n_compliant_rows == df_len,
-            f'Found {df_len - n_compliant_rows} rows incompliant with {q}',
-        )
+        failcount += _check(violations=df.query(q),
+                            condition_message=q,
+                            ai=ai)
     return failcount
 
 
-def unique_index_test(df: pd.DataFrame, unique_index: Optional[Sequence[Hashable]]) -> int:
+def unique_index_test(df: pd.DataFrame,
+                      unique_index: Optional[Sequence[Hashable]]) -> int:
     failcount = 0
     if unique_index is not None:
+        n_dups = df.duplicated(subset=unique_index, keep='first').sum()
         failcount += _passert(
-            ~df.duplicated(subset=unique_index, keep='first').any(),
-            'Found duplicates',
+            n_dups == 0,
+            f'Found {n_dups} duplicates for index {unique_index}',
         )
     return failcount
+
+
+def analyze(incompliant_rows: pd.DataFrame(),
+            cols: Optional[list] = None, analyze_threshold: int = 30):
+    if incompliant_rows.shape[0] > analyze_threshold:
+        cols = cols or incompliant_rows.columns
+        incompliant_rows = incompliant_rows[cols]
+        nunique = incompliant_rows.nunique()
+        common_cols = nunique[nunique == 1].index.to_list()
+        if len(common_cols) > 0:
+            common_cols_values = incompliant_rows.head(1)[common_cols]
+            logger.warning(f'Analyzer: the incompliant rows have common features: \n{common_cols_values.T}')
+        else:
+            logger.warning('Analyzer: no pattern detected.')
+
+
+def _check(violations: pd.DataFrame(),
+           condition_message: str,
+           cols: Optional[list] = None,
+           ai: bool = True
+) -> int:
+    n_violations = violations.shape[0]
+    status = _passert(n_violations == 0,
+                      message=f"Found {n_violations} rows where {condition_message}")
+    if (status != 0) and ai:
+        analyze(incompliant_rows=violations, cols=cols)
+    return status
 
 
 def _passert(passed: bool, message: str) -> int:
