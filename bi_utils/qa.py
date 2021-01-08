@@ -32,7 +32,7 @@ def df_test(
         verify_queries: sequence of negative requirements (queries) all rows should comply with.
                         F.e. "current_date < birth_date" will trigger an alert
                         (warning or ValueError) if any rows where current_date < birth_date
-                        are found in the dataset.
+                        are found in the dataset
     '''
 
     failcount = 0
@@ -91,8 +91,7 @@ def quantile_test(
     for col, (quantile, max_multiplier) in max_quantiles.items():
         q_threshold = df[col].quantile(quantile) * max_multiplier
         if q_threshold <= 0:
-            logger.warning(
-                f'Skipping {col} max_quantiles because threshold <= 0')
+            logger.warning(f'Skipping {col} max_quantiles because threshold <= 0')
             continue
         failcount += _check(
             violations=df[df[col] > q_threshold],
