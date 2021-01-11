@@ -9,3 +9,5 @@ __pycache__
 redshift.json
 postgres.json
 rds.json
+*.ipynb
+*.debug
