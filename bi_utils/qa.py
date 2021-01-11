@@ -132,12 +132,12 @@ def unique_index_test(
     return failcount
 
 
-def analyze(
+def find_common_features(
     incompliant_rows: pd.DataFrame,
     cols: Optional[Sequence[Hashable]] = None,
-    analyze_threshold: int = 30,
+    min_rows: int = 30,
 ) -> None:
-    if incompliant_rows.shape[0] > analyze_threshold:
+    if incompliant_rows.shape[0] > min_rows:
         cols = cols or incompliant_rows.columns
         incompliant_rows = incompliant_rows[cols]
         nunique = incompliant_rows.nunique()
@@ -164,7 +164,7 @@ def _check(
         f"Found {n_violations} rows where {condition_message}",
     )
     if failcount > 0 and ai:
-        analyze(incompliant_rows=violations, cols=cols)
+        find_common_features(incompliant_rows=violations, cols=cols)
     return failcount
 
 
