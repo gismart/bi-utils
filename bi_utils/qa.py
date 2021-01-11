@@ -44,9 +44,12 @@ def df_test(
         nullable_cols = []
     not_nullable_cols = [c for c in cols if c not in nullable_cols]
     nans = df[not_nullable_cols].isna().sum()
+    message = 'Found NA in columns: '
+    for i in nans[nans > 0].to_dict():
+        message += f'\n{i}: {nans[i]}'
     failcount += _passert(
         nans.sum() == 0,
-        f'Found NA in columns: {nans[nans > 0]}',
+        message,
     )
 
     failcount += thresholds_test(df, thresholds, ai=ai)
