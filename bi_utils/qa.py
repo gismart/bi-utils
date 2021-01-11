@@ -44,9 +44,7 @@ def df_test(
         nullable_cols = []
     not_nullable_cols = [c for c in cols if c not in nullable_cols]
     nans = df[not_nullable_cols].isna().sum()
-    message = 'Found NA in columns: '
-    for i in nans[nans > 0].to_dict():
-        message += f'\n{i}: {nans[i]}'
+    message = f'Found NA in columns:\n{nans[nans > 0].to_string()}'
     failcount += _passert(
         nans.sum() == 0,
         message,
@@ -149,7 +147,7 @@ def find_common_features(
             common_cols_values = incompliant_rows.head(1)[common_cols]
             logger.warning(
                 f'Analyzer: the incompliant rows have common features:\n'
-                f'{common_cols_values.T}'
+                f'{common_cols_values.reset_index(drop=True).T[0].to_string()}'
             )
         else:
             logger.warning('Analyzer: no pattern detected')
