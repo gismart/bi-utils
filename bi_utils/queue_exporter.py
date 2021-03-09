@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 
 @dc.dataclass
 class QueueItem:
+    '''Item of Queue to be exported'''
     item_type: str
     kwargs: Dict[str, Any]
 
