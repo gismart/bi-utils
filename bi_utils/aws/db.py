@@ -1,6 +1,7 @@
 import os
 import glob
 import shutil
+import locopy
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterator, Sequence, Optional, Union
@@ -55,12 +56,12 @@ def download_csv(
     delete_s3_after: bool = True,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> Sequence[str]:
     '''Copy data from RedShift to S3 and download csv files up to 6.2 GB'''
-    if data_dir and not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
-        redshift_locopy.unload_and_copy(
+
+    def download(redshift: locopy.Redshift) -> None:
+        redshift.unload_and_copy(
             query=query,
             s3_bucket=bucket,
             s3_folder=bucket_dir,
@@ -71,9 +72,20 @@ def download_csv(
             parallel_off=False,
             unload_options=['CSV', 'HEADER', 'GZIP', 'PARALLEL ON', 'ALLOWOVERWRITE'],
         )
-    logger.info('Data is downloaded to csv files')
-    filenames = glob.glob(os.path.join(data_dir or os.getcwd(), '*part_00.gz'))
-    return filenames
+
+    if data_dir and not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
+        for try_number in range(retries + 1):
+            try:
+                download(redshift_locopy)
+            except locopy.errors.S3DownloadError:
+                logger.info(f'Failed download attempt #{try_number + 1}')
+            else:
+                logger.info('Data is downloaded to csv files')
+                filenames = glob.glob(os.path.join(data_dir or os.getcwd(), '*part_00.gz'))
+                return filenames
+    raise locopy.errors.S3DownloadError(f'Download failed after {retries} retries')
 
 
 def upload_data(
@@ -126,6 +138,7 @@ def download_data(
     chunking: bool = False,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     '''Download data from Redshift via S3'''
     dtype = dtype or {}
@@ -139,6 +152,7 @@ def download_data(
         bucket_dir=bucket_dir,
         secret_id=secret_id,
         database=database,
+        retries=retries,
     )
     chunks = _read_chunks(
         filenames,
@@ -150,13 +164,12 @@ def download_data(
     )
     if chunking:
         return chunks
-    else:
-        data = pd.concat(chunks, ignore_index=True)
-        for bool_col in parse_bools:
-            dtype[bool_col] = 'boolean'
-        data = data.astype(dtype)
-        logger.info('Data is loaded from csv files')
-        return data
+    data = pd.concat(chunks, ignore_index=True)
+    for bool_col in parse_bools:
+        dtype[bool_col] = 'boolean'
+    data = data.astype(dtype)
+    logger.info('Data is loaded from csv files')
+    return data
 
 
 def delete(
