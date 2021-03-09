@@ -107,7 +107,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         if self.disambiguate:
             X = self._disambiguate(X)
         expected_len = X.shape[0]
-        self.result = pd.Series(index=X.index, dtype=np.float)
+        self.result_ = pd.Series(index=X.index, dtype=np.float)
         for lvl in reversed(range(len(self.cols))):
             if self.verbose:
                 logger.info(f'Mapping {self.cols[lvl]}...')
@@ -115,16 +115,16 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
                 [self.cols[lvl], 'ratio']
             ].set_index(self.cols[lvl])['ratio']
             mapping = X[self.cols[lvl]].map(bavg)
-            self.result = self.result.fillna(mapping)
-            n_na = self.result.isna().sum()
+            self.result_ = self.result_.fillna(mapping)
+            n_na = self.result_.isna().sum()
             if self.verbose:
                 logger.info(f'Mapping completed, missing values to fill: {n_na}/{expected_len}')
             if n_na == 0:
                 break
-        n_na = self.result.isna().sum()
+        n_na = self.result_.isna().sum()
         if n_na > 0 and self.verbose:
             logger.info(f'Imputing {n_na} unknown values with global average...')
-        self.result = self.result.fillna(self.total_ratio_)
+        self.result_ = self.result_.fillna(self.total_ratio_)
         if self.verbose:
             logger.info('Completed.')
-        return self.result.values
+        return self.result_.values
