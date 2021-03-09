@@ -1,7 +1,7 @@
 import os
 import shutil
 import psutil
-from typing import Dict
+from typing import Dict, Optional
 
 
 UNITS_MAPPING = {
@@ -28,8 +28,10 @@ def ram_usage() -> str:
     return ram
 
 
-def verbose_size(size_bytes: int, /, units: Dict[str, int] = UNITS_MAPPING) -> str:
+def verbose_size(size_bytes: int, /, units: Optional[Dict[str, int]] = None) -> str:
     '''Convert size in bytes to readable units'''
+    if units is None:
+        units = UNITS_MAPPING
     suffix, factor = '', 1
     for suffix, factor in units.items():
         if size_bytes >= factor:
