@@ -4,7 +4,7 @@ import shutil
 import locopy
 import pandas as pd
 import datetime as dt
-from typing import Any, Iterator, Sequence, Optional, Union
+from typing import Any, Iterable, Iterator, Sequence, Optional, Union
 
 from ..logger import get_logger
 from .. import files, sql
@@ -31,6 +31,7 @@ def upload_csv(
     if not columns:
         columns = files.csv_columns(csv_path, separator=separator)
     table_columns = f'{schema}.{table} ({",".join(columns)})'
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_')
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         redshift_locopy.load_and_copy(
             local_file=csv_path,
@@ -75,6 +76,7 @@ def download_csv(
 
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_')
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -143,7 +145,7 @@ def download_data(
     '''Download data from Redshift via S3'''
     dtype = dtype or {}
     parse_bools = parse_bools or []
-    temp_path = os.path.join(temp_dir, str(dt.datetime.now()))
+    temp_path = _add_timestamp_dir(temp_dir)
     filenames = download_csv(
         query=query,
         data_dir=temp_path,
@@ -156,9 +158,9 @@ def download_data(
     )
     chunks = _read_chunks(
         filenames,
+        parse_bools=parse_bools,
         separator=separator,
         parse_dates=parse_dates,
-        parse_bools=parse_bools,
         dtype=dtype,
         temp_dir=temp_path,
     )
@@ -190,11 +192,16 @@ def delete(
     logger.info(f'Deleted data from {table}')
 
 
+def _add_timestamp_dir(dir_path: str, postfix: str = '') -> str:
+    timestamp = str(dt.datetime.now())
+    return os.path.join(dir_path, f'{timestamp}{postfix}')
+
+
 def _read_chunks(
     filenames: Sequence[str],
+    parse_bools: Iterable[str],
     separator: str = ',',
     parse_dates: Optional[Sequence[str]] = None,
-    parse_bools: Optional[Sequence[str]] = None,
     dtype: Optional[dict] = None,
     temp_dir: Optional[str] = None,
 ) -> Iterator[pd.DataFrame]:
