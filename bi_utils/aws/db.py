@@ -76,16 +76,16 @@ def download_csv(
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
-        for try_number in range(retries + 1):
+        for attempt_number in range(retries + 1):
             try:
                 download(redshift_locopy)
             except locopy.errors.S3DownloadError:
-                logger.info(f'Failed download attempt #{try_number + 1}')
+                logger.warning(f'Failed download attempt #{attempt_number + 1}')
             else:
                 logger.info('Data is downloaded to csv files')
                 filenames = glob.glob(os.path.join(data_dir or os.getcwd(), '*part_00.gz'))
                 return filenames
-    raise locopy.errors.S3DownloadError(f'Download failed after {retries} retries')
+    raise locopy.errors.S3DownloadError('Download failed')
 
 
 def upload_data(
