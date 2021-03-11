@@ -12,8 +12,7 @@ def data_filename(
     '''Build filename for data at specific date'''
     if ext:
         return f"{date}_{data_name}.{ext}"
-    else:
-        return f"{date}_{data_name}"
+    return f"{date}_{data_name}"
 
 
 def csv_columns(csv_path: str, *, separator: str = ",") -> Sequence[str]:

@@ -1,9 +1,11 @@
 import os
 import glob
 import shutil
+import locopy
+import posixpath
 import pandas as pd
 import datetime as dt
-from typing import Any, Iterator, Sequence, Optional, Union
+from typing import Any, Iterable, Iterator, Sequence, Optional, Union
 
 from ..logger import get_logger
 from .. import files, sql
@@ -25,13 +27,12 @@ def upload_csv(
     delete_s3_after: bool = True,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> None:
     '''Upload csv file to S3 and copy to Redshift'''
-    if not columns:
-        columns = files.csv_columns(csv_path, separator=separator)
-    table_columns = f'{schema}.{table} ({",".join(columns)})'
-    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
-        redshift_locopy.load_and_copy(
+
+    def upload(redshift: locopy.Redshift) -> None:
+        redshift.load_and_copy(
             local_file=csv_path,
             s3_bucket=bucket,
             s3_folder=bucket_dir,
@@ -41,8 +42,21 @@ def upload_csv(
             delete_s3_after=delete_s3_after,
             compress=False,
         )
-    filename = os.path.basename(csv_path)
-    logger.info(f'{filename} is uploaded to db')
+
+    if not columns:
+        columns = files.csv_columns(csv_path, separator=separator)
+    table_columns = f'{schema}.{table} ({",".join(columns)})'
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
+    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
+        for attempt_number in range(retries + 1):
+            try:
+                upload(redshift_locopy)
+            except locopy.errors.S3UploadError:
+                logger.warning(f'Failed upload attempt #{attempt_number + 1}')
+            else:
+                filename = os.path.basename(csv_path)
+                logger.info(f'{filename} is uploaded to db')
+    raise locopy.errors.S3UploadError('Upload failed')
 
 
 def download_csv(
@@ -55,12 +69,12 @@ def download_csv(
     delete_s3_after: bool = True,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> Sequence[str]:
     '''Copy data from RedShift to S3 and download csv files up to 6.2 GB'''
-    if data_dir and not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
-        redshift_locopy.unload_and_copy(
+
+    def download(redshift: locopy.Redshift) -> None:
+        redshift.unload_and_copy(
             query=query,
             s3_bucket=bucket,
             s3_folder=bucket_dir,
@@ -71,9 +85,21 @@ def download_csv(
             parallel_off=False,
             unload_options=['CSV', 'HEADER', 'GZIP', 'PARALLEL ON', 'ALLOWOVERWRITE'],
         )
-    logger.info('Data is downloaded to csv files')
-    filenames = glob.glob(os.path.join(data_dir or os.getcwd(), '*part_00.gz'))
-    return filenames
+
+    if data_dir and not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
+    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
+        for attempt_number in range(retries + 1):
+            try:
+                download(redshift_locopy)
+            except locopy.errors.S3DownloadError:
+                logger.warning(f'Failed download attempt #{attempt_number + 1}')
+            else:
+                logger.info('Data is downloaded to csv files')
+                filenames = glob.glob(os.path.join(data_dir or os.getcwd(), '*part_00.gz'))
+                return filenames
+    raise locopy.errors.S3DownloadError('Download failed')
 
 
 def upload_data(
@@ -89,6 +115,7 @@ def upload_data(
     remove_csv: bool = False,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> None:
     '''Save data to csv and upload it to RedShift via S3'''
     filename = os.path.basename(csv_path)
@@ -107,6 +134,7 @@ def upload_data(
         columns=columns,
         secret_id=secret_id,
         database=database,
+        retries=retries,
     )
     if remove_csv:
         os.remove(csv_path)
@@ -126,11 +154,12 @@ def download_data(
     chunking: bool = False,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     '''Download data from Redshift via S3'''
     dtype = dtype or {}
     parse_bools = parse_bools or []
-    temp_path = os.path.join(temp_dir, str(dt.datetime.now()))
+    temp_path = _add_timestamp_dir(temp_dir)
     filenames = download_csv(
         query=query,
         data_dir=temp_path,
@@ -139,24 +168,24 @@ def download_data(
         bucket_dir=bucket_dir,
         secret_id=secret_id,
         database=database,
+        retries=retries,
     )
     chunks = _read_chunks(
         filenames,
+        parse_bools=parse_bools,
         separator=separator,
         parse_dates=parse_dates,
-        parse_bools=parse_bools,
         dtype=dtype,
         temp_dir=temp_path,
     )
     if chunking:
         return chunks
-    else:
-        data = pd.concat(chunks, ignore_index=True)
-        for bool_col in parse_bools:
-            dtype[bool_col] = 'boolean'
-        data = data.astype(dtype)
-        logger.info('Data is loaded from csv files')
-        return data
+    data = pd.concat(chunks, ignore_index=True)
+    for bool_col in parse_bools:
+        dtype[bool_col] = 'boolean'
+    data = data.astype(dtype)
+    logger.info('Data is loaded from csv files')
+    return data
 
 
 def delete(
@@ -177,11 +206,20 @@ def delete(
     logger.info(f'Deleted data from {table}')
 
 
+def _add_timestamp_dir(dir_path: str, postfix: str = '', posix: bool = False) -> str:
+    timestamp = f'{dt.datetime.now()}{postfix}'
+    if posix:
+        dir_path = posixpath.join(dir_path, timestamp)
+    else:
+        dir_path = os.path.join(dir_path, timestamp)
+    return dir_path
+
+
 def _read_chunks(
     filenames: Sequence[str],
+    parse_bools: Iterable[str],
     separator: str = ',',
     parse_dates: Optional[Sequence[str]] = None,
-    parse_bools: Optional[Sequence[str]] = None,
     dtype: Optional[dict] = None,
     temp_dir: Optional[str] = None,
 ) -> Iterator[pd.DataFrame]:

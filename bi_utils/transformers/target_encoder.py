@@ -69,15 +69,15 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
         if self.verbose:
             logger.info('Transforming...')
         has_na = False
-        self.result = pd.DataFrame(index=X.index, dtype=np.float)
+        self.result_ = pd.DataFrame(index=X.index, dtype=np.float)
         for col in self.cols:
             if self.verbose:
                 logger.info(f'Mapping {col}...')
             mean_target = self.groups_[col]['ratio']
-            self.result[col] = X[col].map(mean_target)
-            has_na = self.result.isna().any().any()
+            self.result_[col] = X[col].map(mean_target)
+            has_na = self.result_.isna().any().any()
         if has_na:
-            self.result = self.result.fillna(self.total_ratio_)
+            self.result_ = self.result_.fillna(self.total_ratio_)
         if self.verbose:
             logger.info('Completed.')
-        return self.result
+        return self.result_
