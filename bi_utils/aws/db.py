@@ -2,6 +2,7 @@ import os
 import glob
 import shutil
 import locopy
+import posixpath
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
@@ -31,7 +32,7 @@ def upload_csv(
     if not columns:
         columns = files.csv_columns(csv_path, separator=separator)
     table_columns = f'{schema}.{table} ({",".join(columns)})'
-    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_')
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         redshift_locopy.load_and_copy(
             local_file=csv_path,
@@ -76,7 +77,7 @@ def download_csv(
 
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
-    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_')
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -192,9 +193,13 @@ def delete(
     logger.info(f'Deleted data from {table}')
 
 
-def _add_timestamp_dir(dir_path: str, postfix: str = '') -> str:
-    timestamp = str(dt.datetime.now())
-    return os.path.join(dir_path, f'{timestamp}{postfix}')
+def _add_timestamp_dir(dir_path: str, postfix: str = '', posix: bool = False) -> str:
+    timestamp = f'{dt.datetime.now()}{postfix}'
+    if posix:
+        dir_path = posixpath.join(dir_path, timestamp)
+    else:
+        dir_path = os.path.join(dir_path, timestamp)
+    return dir_path
 
 
 def _read_chunks(
