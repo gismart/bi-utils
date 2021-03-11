@@ -27,14 +27,12 @@ def upload_csv(
     delete_s3_after: bool = True,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> None:
     '''Upload csv file to S3 and copy to Redshift'''
-    if not columns:
-        columns = files.csv_columns(csv_path, separator=separator)
-    table_columns = f'{schema}.{table} ({",".join(columns)})'
-    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
-    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
-        redshift_locopy.load_and_copy(
+
+    def upload(redshift: locopy.Redshift) -> None:
+        redshift.load_and_copy(
             local_file=csv_path,
             s3_bucket=bucket,
             s3_folder=bucket_dir,
@@ -44,8 +42,21 @@ def upload_csv(
             delete_s3_after=delete_s3_after,
             compress=False,
         )
-    filename = os.path.basename(csv_path)
-    logger.info(f'{filename} is uploaded to db')
+
+    if not columns:
+        columns = files.csv_columns(csv_path, separator=separator)
+    table_columns = f'{schema}.{table} ({",".join(columns)})'
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
+    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
+        for attempt_number in range(retries + 1):
+            try:
+                upload(redshift_locopy)
+            except locopy.errors.S3UploadError:
+                logger.warning(f'Failed upload attempt #{attempt_number + 1}')
+            else:
+                filename = os.path.basename(csv_path)
+                logger.info(f'{filename} is uploaded to db')
+    raise locopy.errors.S3UploadError('Upload failed')
 
 
 def download_csv(
@@ -104,6 +115,7 @@ def upload_data(
     remove_csv: bool = False,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
+    retries: int = 0,
 ) -> None:
     '''Save data to csv and upload it to RedShift via S3'''
     filename = os.path.basename(csv_path)
@@ -122,6 +134,7 @@ def upload_data(
         columns=columns,
         secret_id=secret_id,
         database=database,
+        retries=retries,
     )
     if remove_csv:
         os.remove(csv_path)
