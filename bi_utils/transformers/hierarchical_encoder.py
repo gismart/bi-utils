@@ -107,7 +107,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         if self.disambiguate:
             X = self._disambiguate(X)
         expected_len = X.shape[0]
-        self.result_ = pd.Series(index=X.index, dtype=np.float)
+        self.result_ = pd.Series(index=X.index, dtype=float)
         for lvl in reversed(range(len(self.cols))):
             if self.verbose:
                 logger.info(f'Mapping {self.cols[lvl]}...')
