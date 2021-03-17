@@ -51,13 +51,15 @@ def upload_csv(
         for attempt_number in range(retries + 1):
             try:
                 upload(redshift_locopy)
-            except locopy.errors.S3UploadError:
-                logger.warning(f'Failed upload attempt #{attempt_number + 1}')
+            except locopy.errors.S3UploadError as error:
+                if attempt_number == retries:
+                    raise error
+                else:
+                    logger.warning(f'Failed upload attempt #{attempt_number + 1}')
             else:
                 filename = os.path.basename(csv_path)
                 logger.info(f'{filename} is uploaded to db')
                 return
-    raise locopy.errors.S3UploadError('Upload failed')
 
 
 def download_csv(
@@ -94,13 +96,15 @@ def download_csv(
         for attempt_number in range(retries + 1):
             try:
                 download(redshift_locopy)
-            except locopy.errors.S3DownloadError:
-                logger.warning(f'Failed download attempt #{attempt_number + 1}')
+            except locopy.errors.S3DownloadError as error:
+                if attempt_number == retries:
+                    raise error
+                else:
+                    logger.warning(f'Failed download attempt #{attempt_number + 1}')
             else:
                 logger.info('Data is downloaded to csv files')
                 filenames = glob.glob(os.path.join(data_dir or os.getcwd(), '*part_00.gz'))
                 return filenames
-    raise locopy.errors.S3DownloadError('Download failed')
 
 
 def upload_data(
