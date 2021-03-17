@@ -26,6 +26,24 @@ def test_get_query(args, kwargs, expected_query):
 
 
 @pytest.mark.parametrize(
+    'params, expected_set',
+    [
+        ({'predict_dt': '2020-10-01'}, "SET predict_dt = '2020-10-01'"),
+        ({'predict_dt': dt.date(2020, 10, 1)}, "SET predict_dt = '2020-10-01'"),
+        ({'version': 4, 'predict_dt': None}, 'SET version = 4, predict_dt = NULL'),
+    ],
+)
+def test_build_set(params, expected_set):
+    set_str = sql.build_set(**params)
+    assert set_str == expected_set
+
+
+def test_build_set_wo_conditions():
+    with pytest.raises(ValueError, match='.* at least 1 equal condition .*'):
+        sql.build_set()
+
+
+@pytest.mark.parametrize(
     'params, expected_where',
     [
         ({'predict_dt': '2020-10-01'}, "WHERE predict_dt = '2020-10-01'"),
@@ -35,5 +53,5 @@ def test_get_query(args, kwargs, expected_query):
     ],
 )
 def test_build_where(params, expected_where):
-    where = sql.build_where(**params)
-    assert where == expected_where
+    where_str = sql.build_where(**params)
+    assert where_str == expected_where

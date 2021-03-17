@@ -8,6 +8,26 @@ def get_query(sql_path: str, *args: Any, **kwargs: Any) -> str:
     return query
 
 
+def build_set(**equal_conditions: Any) -> str:
+    '''
+    Build SET statement with several `equal_conditions`
+    '''
+    if not equal_conditions:
+        raise ValueError('Pass at least 1 equal condition as keyword argument')
+    set_str = 'SET '
+    for i, (column, value) in enumerate(equal_conditions.items()):
+        if i > 0:
+            set_str += ', '
+        if value is None:
+            set_str += f'{column} = NULL'
+        else:
+            if isinstance(value, (int, float)):
+                set_str += f'{column} = {value}'
+            else:
+                set_str += f"{column} = '{value}'"
+    return set_str
+
+
 def build_where(**equal_conditions: Any) -> str:
     '''
     Build WHERE statement with several `equal_conditions`
@@ -16,15 +36,15 @@ def build_where(**equal_conditions: Any) -> str:
     '''
     if not equal_conditions:
         return 'WHERE 1 = 1'
-    where = 'WHERE '
+    where_str = 'WHERE '
     for i, (column, value) in enumerate(equal_conditions.items()):
         if i > 0:
-            where += ' AND '
+            where_str += ' AND '
         if value is None:
-            where += f'{column} IS NULL'
+            where_str += f'{column} IS NULL'
         else:
             if isinstance(value, (int, float)):
-                where += f'{column} = {value}'
+                where_str += f'{column} = {value}'
             else:
-                where += f"{column} = '{value}'"
-    return where
+                where_str += f"{column} = '{value}'"
+    return where_str
