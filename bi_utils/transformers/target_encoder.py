@@ -69,7 +69,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
         if self.verbose:
             logger.info('Transforming...')
         has_na = False
-        self.result_ = pd.DataFrame(index=X.index, dtype=np.float)
+        self.result_ = pd.DataFrame(index=X.index, dtype=float)
         for col in self.cols:
             if self.verbose:
                 logger.info(f'Mapping {col}...')
