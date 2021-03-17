@@ -56,6 +56,7 @@ def upload_csv(
             else:
                 filename = os.path.basename(csv_path)
                 logger.info(f'{filename} is uploaded to db')
+                return
     raise locopy.errors.S3UploadError('Upload failed')
 
 
