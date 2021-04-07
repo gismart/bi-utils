@@ -29,8 +29,8 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         self.verbose = verbose
 
     def _check_params(self, X: pd.DataFrame) -> None:
-        if self.C <= 1:
-            raise ValueError(f'C={self.C} must be > 1')
+        if self.C <= 0:
+            raise ValueError(f'C={self.C} must be > 0')
 
     def _disambiguate(self, X: pd.DataFrame, sep: str = '__') -> pd.DataFrame:
         '''
