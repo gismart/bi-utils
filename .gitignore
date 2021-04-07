@@ -11,3 +11,4 @@ postgres.json
 rds.json
 *.ipynb
 *.debug
+*.pyc
