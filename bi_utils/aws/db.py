@@ -193,6 +193,29 @@ def download_data(
     return data
 
 
+def update(
+    table: str,
+    schema: str,
+    params_set: dict,
+    params_where: Optional[dict],
+    secret_id: str = 'prod/redshift/analytics',
+    database: Optional[str] = None,
+) -> None:
+    '''
+    Update data in `table` in `schema`.
+    Set `params_set` where `params_where`
+    '''
+    if params_where is None:
+        params_where = {}
+    with connection.connect(schema, secret_id=secret_id, database=database) as conn:
+        with conn.cursor() as cursor:
+            set_str = sql.build_set(**params_set)
+            where_str = sql.build_where(**params_where)
+            query = f'UPDATE {schema}.{table} {set_str} {where_str}'
+            cursor.execute(query)
+    logger.info(f'Updated data in {table}')
+
+
 def delete(
     table: str,
     schema: str,
@@ -205,8 +228,8 @@ def delete(
         raise ValueError('Pass at least 1 equal condition as keyword argument')
     with connection.connect(schema, secret_id=secret_id, database=database) as conn:
         with conn.cursor() as cursor:
-            where = sql.build_where(**equal_conditions)
-            query = f'DELETE FROM {schema}.{table} {where}'
+            where_str = sql.build_where(**equal_conditions)
+            query = f'DELETE FROM {schema}.{table} {where_str}'
             cursor.execute(query)
     logger.info(f'Deleted data from {table}')
 
