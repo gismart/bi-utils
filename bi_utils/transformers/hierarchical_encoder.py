@@ -50,11 +50,18 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         return X
 
     def _reset_dead_level(self, lvl: int) -> None:
-        '''If the level contains the same observations as the parent level, 
-        reset the level's ratio to the parent's one (to avoid chain-effect overfitting in one-of-a-kind case)
         '''
-        dead_level_mask = (self.lvl_groups_[lvl]['target_denominator'] == self.lvl_groups_[lvl]['parent_denominator'])
-        self.lvl_groups_[lvl].loc[dead_level_mask, 'ratio'] = self.lvl_groups_[lvl].loc[dead_level_mask, 'parent_ratio']
+        If the level contains the same observations as the parent level,
+        reset the level's ratio to the parent's one
+        (to avoid chain-effect overfitting in one-of-a-kind case)
+        '''
+        dead_level_mask = (
+            self.lvl_groups_[lvl]['target_denominator']
+            == self.lvl_groups_[lvl]['parent_denominator']
+        )
+        self.lvl_groups_[lvl].loc[dead_level_mask, 'ratio'] = (
+            self.lvl_groups_[lvl].loc[dead_level_mask, 'parent_ratio']
+        )
 
     def fit(self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]) -> HierarchicalEncoder:
         if self.cols is None:
@@ -106,7 +113,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
             self.lvl_groups_[lvl]['ratio'] = (
                 self.lvl_groups_[lvl]['target_numerator']
                 + self.lvl_groups_[lvl]['parent_ratio'] * self.C
-                ) / (self.lvl_groups_[lvl]['target_denominator'] + self.C)
+            ) / (self.lvl_groups_[lvl]['target_denominator'] + self.C)
             self._reset_dead_level(lvl=lvl)
         return self
 
