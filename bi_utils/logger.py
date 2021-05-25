@@ -1,15 +1,12 @@
-import locopy
 import logging
 
 
 FORMAT = '[%(name)s] [%(asctime)s] %(levelname)s: %(message)s'
 DATEFMT = '%Y-%m-%d %H:%M:%S'
 
-locopy_logger = locopy.logger.get_logger()
-if locopy_logger.handlers:
-    formatter = logging.Formatter(FORMAT, DATEFMT)
-    locopy_logger.handlers[0].setFormatter(formatter)
-    locopy_logger.handlers[0].setLevel(logging.WARN)
+logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=logging.WARN)
+locopy_logger = logging.getLogger('locopy')
+locopy_logger.setLevel(logging.WARN)
 
 
 def get_logger(name: str) -> logging.Logger:
