@@ -6,12 +6,10 @@ FORMAT = '[%(name)s] [%(asctime)s] %(levelname)s: %(message)s'
 DATEFMT = '%Y-%m-%d %H:%M:%S'
 
 locopy_logger = locopy.logger.get_logger()
-formatter = logging.Formatter(FORMAT, DATEFMT)
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
-locopy_logger.handlers.clear()
-locopy_logger.addHandler(handler)
-locopy_logger.setLevel(logging.WARN)
+if locopy_logger.handlers:
+    formatter = logging.Formatter(FORMAT, DATEFMT)
+    locopy_logger.handlers[0].setFormatter(formatter)
+    locopy_logger.handlers[0].setLevel(logging.WARN)
 
 
 def get_logger(name: str) -> logging.Logger:
