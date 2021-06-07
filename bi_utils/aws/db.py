@@ -235,7 +235,7 @@ def delete(
 
 
 def _add_timestamp_dir(dir_path: str, postfix: str = '', posix: bool = False) -> str:
-    timestamp = f'{dt.datetime.now()}{postfix}'
+    timestamp = dt.datetime.now().strftime('%Y-%m-%d.%H-%M-%S.%f') + postfix
     if posix:
         dir_path = posixpath.join(dir_path, timestamp)
     else:
