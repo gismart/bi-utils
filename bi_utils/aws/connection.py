@@ -30,15 +30,16 @@ def get_redshift(
 ) -> locopy.Redshift:
     '''Get locopy redshift connection'''
     creds = get_creds(secret_id)
+    dbname = database or creds.get('dbname')
     redshift = locopy.Redshift(
         dbapi=psycopg2,
         host=creds.get('host'),
         port=creds.get('port'),
-        dbname=database or creds.get('dbname'),
+        dbname=dbname,
         user=creds.get('username'),
         password=creds.get('password'),
     )
-    logger.info('Created RedShift connection')
+    logger.info(f'Created {dbname} RedShift connection')
     return redshift
 
 
@@ -49,33 +50,36 @@ def create_engine(
 ) -> sa.engine.Engine:
     '''Create AWS connection engine'''
     creds = get_creds(secret_id=secret_id)
+    dbname = database or creds.get('dbname')
     conn_str = sa.engine.url.URL(
         host=creds.get('host'),
         port=creds.get('port'),
-        database=database or creds.get('dbname'),
+        database=dbname,
         username=creds.get('username'),
         password=creds.get('password'),
         drivername=drivername,
     )
     engine = sa.create_engine(conn_str)
-    logger.info('Created DB engine')
+    logger.info(f'Created {dbname} DB engine')
     return engine
 
 
 def connect(
-    schema: str,
+    schema: Optional[str] = None,
     secret_id: str = 'prod/redshift/analytics',
     database: Optional[str] = None,
 ) -> psycopg2.extensions.connection:
-    '''Connect to `schema` via psycopg2'''
+    '''Connect to db via psycopg2'''
     creds = get_creds(secret_id=secret_id)
+    dbname = database or creds.get('dbname')
     conn = psycopg2.connect(
         host=creds.get('host'),
         port=creds.get('port'),
-        dbname=database or creds.get('dbname'),
+        dbname=dbname,
         user=creds.get('username'),
         password=creds.get('password'),
-        options=f'--search_path={schema}',
+        options=f'--search_path={schema}' if schema else None,
     )
-    logger.info(f'Connected to {schema} schema')
+    schema_postfix = f'{schema} schema' if schema else ''
+    logger.info(f'Connected to {dbname} DB {schema_postfix}')
     return conn
