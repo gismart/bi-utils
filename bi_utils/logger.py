@@ -17,7 +17,6 @@ def config_root_logger(logger: logging.Logger) -> None:
         logger.handlers.clear()
     formatter = logging.Formatter(FORMAT, DATEFMT)
     handler = logging.StreamHandler()
-    handler.setLevel(logger.level)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.propagate = False
