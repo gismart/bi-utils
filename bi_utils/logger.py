@@ -4,14 +4,24 @@ import logging
 FORMAT = '[%(name)s] [%(asctime)s] %(levelname)s: %(message)s'
 DATEFMT = '%Y-%m-%d %H:%M:%S'
 
-logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=logging.WARN)
-locopy_logger = logging.getLogger('locopy')
-locopy_logger.setLevel(logging.WARN)
 
-
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str, level: str = 'info') -> logging.Logger:
     '''Create logger with basic config'''
-    logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=logging.INFO)
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level.upper())
     return logger
+
+
+def config_root_logger(logger: logging.Logger) -> None:
+    if logger.handlers:
+        logger.handlers.clear()
+    formatter = logging.Formatter(FORMAT, DATEFMT)
+    handler = logging.StreamHandler()
+    handler.setLevel(logger.level)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+
+
+config_root_logger(get_logger('bi_utils'))
+config_root_logger(get_logger('locopy', level='warning'))
