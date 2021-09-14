@@ -58,7 +58,7 @@ def upload_csv(
                     logger.warning(f'Failed upload attempt #{attempt_number + 1}')
             else:
                 filename = os.path.basename(csv_path)
-                logger.info(f'{filename} is uploaded to db')
+                logger.info(f'{filename} is uploaded to {schema}.{table}')
                 return
 
 
@@ -128,7 +128,7 @@ def upload_data(
     if not os.path.exists(filedir):
         os.mkdir(filedir)
     data.to_csv(csv_path, index=False, columns=columns)
-    logger.info(f'Data is saved to {filename}')
+    logger.info(f'Data is saved to {filename} ({len(data)} rows)')
     upload_csv(
         csv_path=csv_path,
         schema=schema,
@@ -189,7 +189,7 @@ def download_data(
     for bool_col in parse_bools:
         dtype[bool_col] = 'boolean'
     data = data.astype(dtype)
-    logger.info('Data is loaded from csv files')
+    logger.info(f'Data is loaded from csv files ({len(data)} rows)')
     return data
 
 
@@ -213,7 +213,7 @@ def update(
             where_str = sql.build_where(**params_where)
             query = f'UPDATE {schema}.{table} {set_str} {where_str}'
             cursor.execute(query)
-    logger.info(f'Updated data in {table}')
+    logger.info(f'Updated data in {schema}.{table}')
 
 
 def delete(
@@ -231,7 +231,7 @@ def delete(
             where_str = sql.build_where(**equal_conditions)
             query = f'DELETE FROM {schema}.{table} {where_str}'
             cursor.execute(query)
-    logger.info(f'Deleted data from {table}')
+    logger.info(f'Deleted data from {schema}.{table}')
 
 
 def _add_timestamp_dir(dir_path: str, postfix: str = '', posix: bool = False) -> str:
