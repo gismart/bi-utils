@@ -137,7 +137,7 @@ class QueueExporter:
             df.to_csv(file_path, index=False, columns=columns)
         else:
             df.to_pickle(file_path)
-        logger.info(f'Saved df to {filename}')
+        logger.info(f'Saved df to {filename} ({len(df)} rows)')
         self._export_file(
             file_path,
             separator=separator,
