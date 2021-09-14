@@ -51,7 +51,7 @@ def create_engine(
     '''Create AWS connection engine'''
     creds = get_creds(secret_id=secret_id)
     dbname = database or creds.get('dbname')
-    conn_str = sa.engine.url.URL(
+    conn_str = sa.engine.url.URL.create(
         host=creds.get('host'),
         port=creds.get('port'),
         database=dbname,
