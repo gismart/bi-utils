@@ -46,7 +46,7 @@ def upload_csv(
     if not columns:
         columns = files.csv_columns(csv_path, separator=separator)
     table_columns = f'{schema}.{table} ({",".join(columns)})'
-    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
+    bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -91,7 +91,7 @@ def download_csv(
 
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
-    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='_', posix=True)
+    bucket_dir = _add_timestamp_dir(bucket_dir, postfix='/', posix=True)
     with connection.get_redshift(secret_id, database=database) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -235,7 +235,7 @@ def delete(
 
 
 def _add_timestamp_dir(dir_path: str, postfix: str = '', posix: bool = False) -> str:
-    timestamp = dt.datetime.now().strftime('%Y-%m-%d.%H-%M-%S.%f') + postfix
+    timestamp = dt.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f') + postfix
     if posix:
         dir_path = posixpath.join(dir_path, timestamp)
     else:

@@ -2,14 +2,14 @@ import json
 import boto3
 import psycopg2
 import sqlalchemy as sa
-from typing import Optional
+from typing import Dict, Optional
 
 from ..logger import get_logger
 from .locopy import locopy
 
 
 logger = get_logger(__name__)
-cached_creds = {}
+cached_creds: Dict[str, dict] = {}
 
 
 def get_creds(secret_id: str = 'prod/redshift/analytics') -> dict:
@@ -19,6 +19,8 @@ def get_creds(secret_id: str = 'prod/redshift/analytics') -> dict:
         client = boto3.client('secretsmanager')
         secret = client.get_secret_value(SecretId=secret_id)
         creds = json.loads(secret['SecretString'])
+        if creds is None:
+            raise ValueError('There is no credentials for given secret')
         cached_creds[secret_id] = creds
         logger.info(f'Loaded AWS credentials ({secret_id})')
     return creds
