@@ -13,9 +13,7 @@ def df_test(
     ai: bool = True,
     nullable_cols: Optional[Sequence[Hashable]] = None,
     unique_index: Optional[Sequence[Hashable]] = None,
-    thresholds: Optional[
-        Dict[Hashable, Tuple[Union[int, float], Union[int, float]]]
-    ] = None,
+    thresholds: Optional[Dict[Hashable, Tuple[Union[int, float], Union[int, float]]]] = None,
     max_quantiles: Optional[Dict[Hashable, Tuple[float, int]]] = None,
     verify_queries: Optional[Sequence[str]] = None,
 ) -> int:
@@ -57,9 +55,7 @@ def df_test(
     failcount += query_test(df, verify_queries, ai=ai)
     failcount += unique_index_test(df, unique_index)
     if strict and failcount > 0:
-        raise ValueError(
-            f"Data qa failcount: {failcount}, force exit since in strict mode"
-        )
+        raise ValueError(f"Data qa failcount: {failcount}, force exit since in strict mode")
     return failcount
 
 

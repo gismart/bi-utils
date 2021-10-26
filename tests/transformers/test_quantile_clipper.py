@@ -6,9 +6,7 @@ from bi_utils import transformers
 from .. import utils
 
 
-@pytest.mark.parametrize(
-    "cols", [["media_source", "campaign_id"], ["media_source"], None]
-)
+@pytest.mark.parametrize("cols", [["media_source", "campaign_id"], ["media_source"], None])
 @pytest.mark.parametrize("q", [0.01, 0.2, 0.5])
 def test_quantile_clipper(cols, q, data):
     data = data.dropna()

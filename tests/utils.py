@@ -25,9 +25,7 @@ def make_target_data(
         X = data.drop("conversion", axis=1)
         y = data["conversion"]
         estimator.fit(X, y)
-        estimator_data = (
-            estimator.transform(X, y) if transform_y else estimator.transform(X)
-        )
+        estimator_data = estimator.transform(X, y) if transform_y else estimator.transform(X)
         if not isinstance(estimator_data, pd.DataFrame):
             estimator_data = pd.DataFrame({"conversion": estimator_data})
         for param, value in params.items():

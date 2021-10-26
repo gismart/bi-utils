@@ -3,9 +3,7 @@ from bi_utils.aws import connection
 
 def test_get_creds():
     creds = connection.get_creds()
-    assert all(
-        key in creds for key in ("username", "password", "host", "port", "dbname")
-    )
+    assert all(key in creds for key in ("username", "password", "host", "port", "dbname"))
 
 
 def test_get_redshift():

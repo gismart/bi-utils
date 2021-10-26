@@ -48,9 +48,7 @@ def build_where(**conditions: Any) -> str:
             if isinstance(value, (int, float)):
                 where_str += f"{column} = {value}"
             elif isinstance(value, (list, tuple)):
-                in_str = ", ".join(
-                    [f"'{v}'" if isinstance(v, str) else str(v) for v in value]
-                )
+                in_str = ", ".join([f"'{v}'" if isinstance(v, str) else str(v) for v in value])
                 where_str += f"{column} IN ({in_str})"
             else:
                 where_str += f"{column} = '{value}'"

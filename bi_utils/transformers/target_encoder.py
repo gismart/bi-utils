@@ -55,9 +55,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
 
         self.groups_ = {}
         for col in self.cols:
-            self.groups_[col] = X.groupby(col)[
-                ["target_numerator", "target_denominator"]
-            ].sum()
+            self.groups_[col] = X.groupby(col)[["target_numerator", "target_denominator"]].sum()
             self.groups_[col]["ratio"] = (
                 self.groups_[col]["target_numerator"] + self.total_ratio_ * self.C
             ) / (self.groups_[col]["target_denominator"] + self.C)

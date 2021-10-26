@@ -64,9 +64,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
             dead_level_mask, "parent_ratio"
         ]
 
-    def fit(
-        self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]
-    ) -> HierarchicalEncoder:
+    def fit(self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]) -> HierarchicalEncoder:
         if self.cols is None:
             self.cols = [c for c in X.columns if not c == self.sample_weight_col]
         if self.sample_weight_col is None:
@@ -97,9 +95,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         self.lvl_groups_ = {}
         for lvl, _ in enumerate(self.cols):
             self.lvl_groups_[lvl] = (
-                X.groupby(self.cols[: lvl + 1])[
-                    ["target_numerator", "target_denominator"]
-                ]
+                X.groupby(self.cols[: lvl + 1])[["target_numerator", "target_denominator"]]
                 .sum()
                 .reset_index()
             )
@@ -110,15 +106,13 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
                 parent_col = self.cols[lvl - 1]
                 parent_groups = self.lvl_groups_[lvl - 1]
                 parent_ratio = parent_groups.set_index(parent_col)["ratio"]
-                self.lvl_groups_[lvl]["parent_ratio"] = self.lvl_groups_[lvl][
-                    parent_col
-                ].map(parent_ratio)
-                parent_denominator = parent_groups.set_index(parent_col)[
-                    "target_denominator"
-                ]
-                self.lvl_groups_[lvl]["parent_denominator"] = self.lvl_groups_[lvl][
-                    parent_col
-                ].map(parent_denominator)
+                self.lvl_groups_[lvl]["parent_ratio"] = self.lvl_groups_[lvl][parent_col].map(
+                    parent_ratio
+                )
+                parent_denominator = parent_groups.set_index(parent_col)["target_denominator"]
+                self.lvl_groups_[lvl]["parent_denominator"] = self.lvl_groups_[lvl][parent_col].map(
+                    parent_denominator
+                )
             self.lvl_groups_[lvl]["ratio"] = (
                 self.lvl_groups_[lvl]["target_numerator"]
                 + self.lvl_groups_[lvl]["parent_ratio"] * self.C
@@ -149,9 +143,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
             self.result_ = self.result_.fillna(mapping)
             n_na = self.result_.isna().sum()
             if self.verbose:
-                logger.info(
-                    f"Mapping completed, missing values to fill: {n_na}/{expected_len}"
-                )
+                logger.info(f"Mapping completed, missing values to fill: {n_na}/{expected_len}")
             if n_na == 0:
                 break
         n_na = self.result_.isna().sum()

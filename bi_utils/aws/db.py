@@ -103,9 +103,7 @@ def download_csv(
                     logger.warning(f"Failed download attempt #{attempt_number + 1}")
             else:
                 logger.info("Data is downloaded to csv files")
-                filenames = glob.glob(
-                    os.path.join(data_dir or os.getcwd(), "*part_00.gz")
-                )
+                filenames = glob.glob(os.path.join(data_dir or os.getcwd(), "*part_00.gz"))
                 return filenames
 
 
@@ -256,9 +254,7 @@ def _read_chunks(
     temp_dir: Optional[str] = None,
 ) -> Iterator[pd.DataFrame]:
     boolean_values = {"t": True, "f": False}
-    converters = {
-        col: lambda value: boolean_values.get(value, pd.NA) for col in parse_bools
-    }
+    converters = {col: lambda value: boolean_values.get(value, pd.NA) for col in parse_bools}
     try:
         for i, filename in enumerate(filenames):
             chunk = pd.read_csv(

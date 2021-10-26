@@ -15,9 +15,7 @@ logger = get_logger(__name__)
 class QuantileClipper(BaseEstimator, TransformerMixin):
     """Clip grouped features by certain quantile"""
 
-    def __init__(
-        self, *, cols: Optional[Sequence[str]] = None, q: float = 0.001
-    ) -> None:
+    def __init__(self, *, cols: Optional[Sequence[str]] = None, q: float = 0.001) -> None:
         self.uq = 1 - q
         self.lq = q
         self.cols = cols
@@ -43,12 +41,8 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
 
         X["target"] = y
         groups = X.groupby(self.cols)
-        self.groups_l_ = (
-            groups["target"].quantile(self.lq).fillna(y.min()).rename("target_l")
-        )
-        self.groups_u_ = (
-            groups["target"].quantile(self.uq).fillna(y.max()).rename("target_u")
-        )
+        self.groups_l_ = groups["target"].quantile(self.lq).fillna(y.min()).rename("target_l")
+        self.groups_u_ = groups["target"].quantile(self.uq).fillna(y.max()).rename("target_u")
         self.n_groups_ = len(groups)
         return self
 
@@ -71,7 +65,5 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
         assert ~(X["target_l"] > X["target_u"]).any()
         return X["modified_target"].values
 
-    def fit_transform(
-        self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]
-    ) -> np.ndarray:
+    def fit_transform(self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]) -> np.ndarray:
         return self.fit(X, y).transform(X, y)

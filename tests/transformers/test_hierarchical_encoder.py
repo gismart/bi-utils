@@ -6,9 +6,7 @@ from bi_utils import transformers
 from .. import utils
 
 
-@pytest.mark.parametrize(
-    "cols", [["media_source", "campaign_id"], ["media_source"], None]
-)
+@pytest.mark.parametrize("cols", [["media_source", "campaign_id"], ["media_source"], None])
 @pytest.mark.parametrize("C", [2, 10, 100])
 def test_hierarchical_encoder(cols, C, data):
     data = data.dropna()

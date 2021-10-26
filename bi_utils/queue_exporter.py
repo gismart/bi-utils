@@ -196,9 +196,7 @@ class QueueExporter:
         table: Optional[str],
     ) -> None:
         if sum(1 for arg in [s3_bucket, s3_bucket_dir] if arg is None) == 1:
-            raise ValueError(
-                "Pass both s3_bucket and s3_bucket_dir arguments for S3 export"
-            )
+            raise ValueError("Pass both s3_bucket and s3_bucket_dir arguments for S3 export")
         if sum(1 for arg in [schema, table] if arg is None) == 1:
             raise ValueError("Pass both schema and table arguments for DB export")
         if schema and table and ".csv" not in file_path.lower():

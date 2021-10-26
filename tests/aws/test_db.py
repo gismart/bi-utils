@@ -27,9 +27,7 @@ def test_upload_download_delete():
     data.predict_dt = pd.to_datetime(data.predict_dt)
     db.upload_data(data, "/tmp/data.csv", schema=schema, table=table)
     query = f"SELECT * FROM {schema}.{table} WHERE version = {version}"
-    downloaded_data = db.download_data(
-        query, parse_dates=["predict_dt"], dtype={"version": "int"}
-    )
+    downloaded_data = db.download_data(query, parse_dates=["predict_dt"], dtype={"version": "int"})
     downloaded_data.pop("load_dttm")
     assert downloaded_data.equals(data)
     db.delete(table, schema=schema, version=version)
@@ -54,12 +52,8 @@ def test_upload_update_download():
     params_set = {"version": new_version}
     params_where = {"text": "bye"}
     db.update(table, schema=schema, params_set=params_set, params_where=params_where)
-    query = (
-        f"SELECT * FROM {schema}.{table} WHERE version IN ({version}, {new_version})"
-    )
-    downloaded_data = db.download_data(
-        query, parse_dates=["predict_dt"], dtype={"version": "int"}
-    )
+    query = f"SELECT * FROM {schema}.{table} WHERE version IN ({version}, {new_version})"
+    downloaded_data = db.download_data(query, parse_dates=["predict_dt"], dtype={"version": "int"})
     downloaded_data.pop("load_dttm")
     assert not downloaded_data.equals(data)
     version2_rows = (downloaded_data["version"] == new_version).sum()
