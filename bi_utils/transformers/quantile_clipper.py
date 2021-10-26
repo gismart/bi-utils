@@ -13,8 +13,11 @@ logger = get_logger(__name__)
 
 
 class QuantileClipper(BaseEstimator, TransformerMixin):
-    '''Clip grouped features by certain quantile'''
-    def __init__(self, *, cols: Optional[Sequence[str]] = None, q: float = 0.001) -> None:
+    """Clip grouped features by certain quantile"""
+
+    def __init__(
+        self, *, cols: Optional[Sequence[str]] = None, q: float = 0.001
+    ) -> None:
         self.uq = 1 - q
         self.lq = q
         self.cols = cols
@@ -22,10 +25,10 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
 
     def _check_params(self, X: pd.DataFrame) -> None:
         if not 0 < self.lq <= 0.5:
-            raise ValueError(f'q={self.lq} must be in (0, 0.5] interval')
+            raise ValueError(f"q={self.lq} must be in (0, 0.5] interval")
         if len(X) < 1 / self.lq:
             logger.warning(
-                f'q={self.lq} is too small for given data. Quatiles are equivalent to min/max'
+                f"q={self.lq} is too small for given data. Quatiles are equivalent to min/max"
             )
 
     def fit(self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]) -> QuantileClipper:
@@ -38,10 +41,14 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
         self._validate_data(X, y, dtype=None, y_numeric=True)
         self._check_params(X)
 
-        X['target'] = y
+        X["target"] = y
         groups = X.groupby(self.cols)
-        self.groups_l_ = groups['target'].quantile(self.lq).fillna(y.min()).rename('target_l')
-        self.groups_u_ = groups['target'].quantile(self.uq).fillna(y.max()).rename('target_u')
+        self.groups_l_ = (
+            groups["target"].quantile(self.lq).fillna(y.min()).rename("target_l")
+        )
+        self.groups_u_ = (
+            groups["target"].quantile(self.uq).fillna(y.max()).rename("target_u")
+        )
         self.n_groups_ = len(groups)
         return self
 
@@ -53,16 +60,18 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
             y = y.values
         self._validate_data(X, y, dtype=None, y_numeric=True)
 
-        X['target'] = y
+        X["target"] = y
         X = X.set_index(self.cols)
-        X = X.join(self.groups_l_, how='left')
-        X = X.join(self.groups_u_, how='left')
-        X['target_l'] = X['target_l'].fillna(y.min())
-        X['target_u'] = X['target_u'].fillna(y.max())
-        X['modified_target'] = X['target'].clip(X['target_l'], X['target_u'])
+        X = X.join(self.groups_l_, how="left")
+        X = X.join(self.groups_u_, how="left")
+        X["target_l"] = X["target_l"].fillna(y.min())
+        X["target_u"] = X["target_u"].fillna(y.max())
+        X["modified_target"] = X["target"].clip(X["target_l"], X["target_u"])
 
-        assert ~(X['target_l'] > X['target_u']).any()
-        return X['modified_target'].values
+        assert ~(X["target_l"] > X["target_u"]).any()
+        return X["modified_target"].values
 
-    def fit_transform(self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]) -> np.ndarray:
+    def fit_transform(
+        self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]
+    ) -> np.ndarray:
         return self.fit(X, y).transform(X, y)

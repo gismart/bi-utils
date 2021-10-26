@@ -6,31 +6,31 @@ from . import utils
 
 
 @pytest.mark.parametrize(
-    'args, kwargs, expected_query',
+    "args, kwargs, expected_query",
     [
         (
-            ('*',),
-            {'table': 'sub_ltv', 'predict_dt': dt.date(2020, 10, 1)},
-            'SELECT *\nFROM sub_ltv\nWHERE predict_dt = 2020-10-01',
+            ("*",),
+            {"table": "sub_ltv", "predict_dt": dt.date(2020, 10, 1)},
+            "SELECT *\nFROM sub_ltv\nWHERE predict_dt = 2020-10-01",
         ),
         (
-            ('ltv',),
-            {'table': 'source.ads_ltv', 'predict_dt': '2020-10-01', 'version': 2},
-            'SELECT ltv\nFROM source.ads_ltv\nWHERE predict_dt = 2020-10-01',
+            ("ltv",),
+            {"table": "source.ads_ltv", "predict_dt": "2020-10-01", "version": 2},
+            "SELECT ltv\nFROM source.ads_ltv\nWHERE predict_dt = 2020-10-01",
         ),
     ],
 )
 def test_get_query(args, kwargs, expected_query):
-    query = sql.get_query(utils.data_path('query.sql'), *args, **kwargs)
+    query = sql.get_query(utils.data_path("query.sql"), *args, **kwargs)
     assert query == expected_query
 
 
 @pytest.mark.parametrize(
-    'params, expected_set',
+    "params, expected_set",
     [
-        ({'predict_dt': '2020-10-01'}, "SET predict_dt = '2020-10-01'"),
-        ({'predict_dt': dt.date(2020, 10, 1)}, "SET predict_dt = '2020-10-01'"),
-        ({'version': 4, 'predict_dt': None}, 'SET version = 4, predict_dt = NULL'),
+        ({"predict_dt": "2020-10-01"}, "SET predict_dt = '2020-10-01'"),
+        ({"predict_dt": dt.date(2020, 10, 1)}, "SET predict_dt = '2020-10-01'"),
+        ({"version": 4, "predict_dt": None}, "SET version = 4, predict_dt = NULL"),
     ],
 )
 def test_build_set(params, expected_set):
@@ -39,17 +39,20 @@ def test_build_set(params, expected_set):
 
 
 def test_build_set_wo_conditions():
-    with pytest.raises(ValueError, match='.* at least 1 equal condition .*'):
+    with pytest.raises(ValueError, match=".* at least 1 equal condition .*"):
         sql.build_set()
 
 
 @pytest.mark.parametrize(
-    'params, expected_where',
+    "params, expected_where",
     [
-        ({'predict_dt': '2020-10-01'}, "WHERE predict_dt = '2020-10-01'"),
-        ({'predict_dt': dt.date(2020, 10, 1)}, "WHERE predict_dt = '2020-10-01'"),
-        ({'version': 4, 'predict_dt': None}, 'WHERE version = 4 AND predict_dt IS NULL'),
-        ({}, 'WHERE 1 = 1'),
+        ({"predict_dt": "2020-10-01"}, "WHERE predict_dt = '2020-10-01'"),
+        ({"predict_dt": dt.date(2020, 10, 1)}, "WHERE predict_dt = '2020-10-01'"),
+        (
+            {"version": 4, "predict_dt": None},
+            "WHERE version = 4 AND predict_dt IS NULL",
+        ),
+        ({}, "WHERE 1 = 1"),
     ],
 )
 def test_build_where(params, expected_where):

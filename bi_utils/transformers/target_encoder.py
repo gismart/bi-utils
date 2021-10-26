@@ -13,7 +13,8 @@ logger = get_logger(__name__)
 
 
 class TargetEncoder(BaseEstimator, TransformerMixin):
-    '''Target encoding'''
+    """Target encoding"""
+
     def __init__(
         self,
         cols: Optional[Sequence[str]] = None,
@@ -28,7 +29,7 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
 
     def _check_params(self, X: pd.DataFrame) -> None:
         if self.C <= 1:
-            raise ValueError(f'C={self.C} must be > 1')
+            raise ValueError(f"C={self.C} must be > 1")
 
     def fit(self, X: pd.DataFrame, y: Union[pd.Series, np.ndarray]) -> TargetEncoder:
         if self.cols is None:
@@ -45,20 +46,21 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
         self._check_params(X)
 
         if self.verbose:
-            logger.info('Fitting...')
+            logger.info("Fitting...")
 
-        X['target_denominator'] = sample_weight
-        X['target_numerator'] = y * sample_weight
+        X["target_denominator"] = sample_weight
+        X["target_numerator"] = y * sample_weight
 
         self.total_ratio_ = np.average(y, weights=sample_weight)
 
         self.groups_ = {}
         for col in self.cols:
-            self.groups_[col] = X.groupby(col)[['target_numerator', 'target_denominator']].sum()
-            self.groups_[col]['ratio'] = (
-                self.groups_[col]['target_numerator']
-                + self.total_ratio_ * self.C
-            ) / (self.groups_[col]['target_denominator'] + self.C)
+            self.groups_[col] = X.groupby(col)[
+                ["target_numerator", "target_denominator"]
+            ].sum()
+            self.groups_[col]["ratio"] = (
+                self.groups_[col]["target_numerator"] + self.total_ratio_ * self.C
+            ) / (self.groups_[col]["target_denominator"] + self.C)
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -67,17 +69,17 @@ class TargetEncoder(BaseEstimator, TransformerMixin):
         self._validate_data(X, dtype=None)
 
         if self.verbose:
-            logger.info('Transforming...')
+            logger.info("Transforming...")
         has_na = False
         self.result_ = pd.DataFrame(index=X.index, dtype=float)
         for col in self.cols:
             if self.verbose:
-                logger.info(f'Mapping {col}...')
-            mean_target = self.groups_[col]['ratio']
+                logger.info(f"Mapping {col}...")
+            mean_target = self.groups_[col]["ratio"]
             self.result_[col] = X[col].map(mean_target)
             has_na = self.result_.isna().any().any()
         if has_na:
             self.result_ = self.result_.fillna(self.total_ratio_)
         if self.verbose:
-            logger.info('Completed.')
+            logger.info("Completed.")
         return self.result_
