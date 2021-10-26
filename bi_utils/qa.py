@@ -17,7 +17,7 @@ def df_test(
     max_quantiles: Optional[Dict[Hashable, Tuple[float, int]]] = None,
     verify_queries: Optional[Sequence[str]] = None,
 ) -> int:
-    '''
+    """
     Check dataframe for emptiness, check non-nullable_cols columns for NAs, run quantile and
     thresholds tests for numeric data, verify that all rows comply with custom requirements
     (queries)
@@ -33,18 +33,18 @@ def df_test(
                         F.e. "current_date < birth_date" will trigger an alert
                         (warning or ValueError) if any rows where current_date < birth_date
                         are found in the dataset
-    '''
+    """
 
     failcount = 0
     if df.empty:
-        raise ValueError('The dataframe is empty')
+        raise ValueError("The dataframe is empty")
     cols = df.columns
 
     if nullable_cols is None:
         nullable_cols = []
     not_nullable_cols = [c for c in cols if c not in nullable_cols]
     nans = df[not_nullable_cols].isna().sum()
-    message = f'Found NA in columns:\n{nans[nans > 0].to_string()}'
+    message = f"Found NA in columns:\n{nans[nans > 0].to_string()}"
     failcount += _passert(
         nans.sum() == 0,
         message,
@@ -55,7 +55,7 @@ def df_test(
     failcount += query_test(df, verify_queries, ai=ai)
     failcount += unique_index_test(df, unique_index)
     if strict and failcount > 0:
-        raise ValueError(f'Data qa failcount: {failcount}, force exit since in strict mode')
+        raise ValueError(f"Data qa failcount: {failcount}, force exit since in strict mode")
     return failcount
 
 
@@ -70,12 +70,12 @@ def thresholds_test(
     for col, (min_threshold, max_threshold) in thresholds.items():
         failcount += _check(
             violations=df[df[col] < min_threshold],
-            condition_message=f'{col} is below {min_threshold}',
+            condition_message=f"{col} is below {min_threshold}",
             ai=ai,
         )
         failcount += _check(
             violations=df[df[col] > max_threshold],
-            condition_message=f'{col} is above {max_threshold}',
+            condition_message=f"{col} is above {max_threshold}",
             ai=ai,
         )
     return failcount
@@ -92,11 +92,11 @@ def quantile_test(
     for col, (quantile, max_multiplier) in max_quantiles.items():
         q_threshold = df[col].quantile(quantile) * max_multiplier
         if q_threshold <= 0:
-            logger.warning(f'Skipping {col} max_quantiles because threshold <= 0')
+            logger.warning(f"Skipping {col} max_quantiles because threshold <= 0")
             continue
         failcount += _check(
             violations=df[df[col] > q_threshold],
-            condition_message=f'{col} is above {q_threshold}',
+            condition_message=f"{col} is above {q_threshold}",
             ai=ai,
         )
     return failcount
@@ -125,10 +125,10 @@ def unique_index_test(
 ) -> int:
     failcount = 0
     if unique_index is not None:
-        n_dups = df.duplicated(subset=unique_index, keep='first').sum()
+        n_dups = df.duplicated(subset=unique_index, keep="first").sum()
         failcount += _passert(
             n_dups == 0,
-            f'Found {n_dups} duplicates for index {unique_index}',
+            f"Found {n_dups} duplicates for index {unique_index}",
         )
     return failcount
 
@@ -146,11 +146,11 @@ def find_common_features(
         if len(common_cols) > 0:
             common_cols_values = incompliant_rows.head(1)[common_cols]
             logger.warning(
-                f'Analyzer: the incompliant rows have common features:\n'
-                f'{common_cols_values.reset_index(drop=True).T[0].to_string()}'
+                f"Analyzer: the incompliant rows have common features:\n"
+                f"{common_cols_values.reset_index(drop=True).T[0].to_string()}"
             )
         else:
-            logger.warning('Analyzer: no pattern detected')
+            logger.warning("Analyzer: no pattern detected")
 
 
 def _check(

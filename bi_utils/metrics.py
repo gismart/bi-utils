@@ -11,7 +11,7 @@ def mean_absolute_percentage_error(
     sample_weight: Optional[np.ndarray] = None,
     epsilon: float = sys.float_info.epsilon,
 ) -> float:
-    '''Mean absolute percentage error regression loss'''
+    """Mean absolute percentage error regression loss"""
     _check_arrays(y_true, y_pred, sample_weight)
     errors = np.abs(y_pred - y_true) / np.maximum(np.abs(y_true), epsilon)
     mape = np.average(errors, weights=sample_weight, axis=0)
@@ -24,7 +24,7 @@ def mean_percentage_bias(
     *,
     sample_weight: Optional[np.ndarray] = None,
 ) -> float:
-    '''Mean percentage bias'''
+    """Mean percentage bias"""
     _check_arrays(y_true, y_pred, sample_weight)
     delta = np.average(y_pred - y_true, weights=sample_weight, axis=0)
     avg = np.average(y_true, weights=sample_weight, axis=0)
