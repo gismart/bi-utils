@@ -53,6 +53,7 @@ def test_build_set_wo_conditions():
             "WHERE version = 4 AND predict_dt IS NULL",
         ),
         ({}, "WHERE 1 = 1"),
+        ({"os_name": ["ios", "web"]}, "WHERE os_name IN ('ios', 'web')"),
     ],
 )
 def test_build_where(params, expected_where):
