@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any
 
 
 def get_query(sql_path: str, *args: Any, **kwargs: Any) -> str:
