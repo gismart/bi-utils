@@ -241,8 +241,8 @@ class QueueExporter:
         s3_bucket_dir: Optional[str],
         schema: Optional[str],
         table: Optional[str],
-        delete_s3_after: Optional[bool] = False,
-        delete_file_after: Optional[bool] = False,
+        delete_s3_after: Optional[bool],
+        delete_file_after: Optional[bool],
     ) -> None:
         if sum(1 for arg in [s3_bucket, s3_bucket_dir] if arg is None) == 1:
             raise ValueError("Pass both s3_bucket and s3_bucket_dir arguments for S3 export")
