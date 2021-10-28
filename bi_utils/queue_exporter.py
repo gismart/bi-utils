@@ -124,7 +124,7 @@ class QueueExporter:
         """
         Export file to S3 if `s3_bucket` and `s3_bucket_dir` passed
 
-        Exportes csv file to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
+        Export csv file to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
         """
         self._check_args(
             file_path, s3_bucket, s3_bucket_dir, schema, table, delete_s3_after, delete_file_after
