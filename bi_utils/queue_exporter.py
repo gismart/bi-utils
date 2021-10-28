@@ -25,13 +25,7 @@ class QueueItem:
 class QueueExporter:
     """Export queue in its own process"""
 
-    def __init__(
-        self,
-        *,
-        process_name: str = "exporter",
-        temp_s3_bucket: str = "gismart-analytics",
-        temp_s3_bucket_dir: str = "dwh/temp",
-    ) -> None:
+    def __init__(self, *, process_name: str = "exporter") -> None:
         self._queue = mp.Queue()
         self._item_type_funcs = {
             "df": self._export_df,
@@ -39,8 +33,6 @@ class QueueExporter:
         }
         self._close_signal = "close"
         self._process_name = process_name
-        self._temp_s3_bucket = temp_s3_bucket
-        self._temp_s3_bucket_dir = temp_s3_bucket_dir
         self._alive = True
         self._process = mp.Process(target=self._worker, name=process_name)
         self._process.start()
@@ -82,8 +74,22 @@ class QueueExporter:
         s3_bucket_dir: Optional[str] = None,
         schema: Optional[str] = None,
         table: Optional[str] = None,
+        delete_file_after: bool = False,
+        delete_s3_after: bool = False,
+        secret_id: str = "prod/redshift/analytics",
     ) -> None:
-        self._check_args(file_path, s3_bucket, s3_bucket_dir, schema, table)
+        """
+        Save dataframe to `filepath` if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` not passed
+
+        Export dataframe to S3 if `s3_bucket` and `s3_bucket_dir` passed
+
+        Export dataframe to DB if `schema` and `table` passed
+
+        Export dataframe to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
+        """
+        self._check_args(
+            file_path, s3_bucket, s3_bucket_dir, schema, table, delete_s3_after, delete_file_after
+        )
         self._check_process()
         kwargs = {
             "df": df,
@@ -94,6 +100,9 @@ class QueueExporter:
             "s3_bucket_dir": s3_bucket_dir,
             "schema": schema,
             "table": table,
+            "delete_file_after": delete_file_after,
+            "delete_s3_after": delete_s3_after,
+            "secret_id": secret_id,
         }
         item = QueueItem(item_type="df", kwargs=kwargs)
         self._queue.put(item)
@@ -102,14 +111,24 @@ class QueueExporter:
         self,
         file_path: str,
         /,
+        s3_bucket: str,
+        s3_bucket_dir: str,
         *,
         separator: str = ",",
-        s3_bucket: Optional[str] = None,
-        s3_bucket_dir: Optional[str] = None,
         schema: Optional[str] = None,
         table: Optional[str] = None,
+        delete_file_after: bool = False,
+        delete_s3_after: bool = False,
+        secret_id: str = "prod/redshift/analytics",
     ) -> None:
-        self._check_args(file_path, s3_bucket, s3_bucket_dir, schema, table)
+        """
+        Export file to S3 if `s3_bucket` and `s3_bucket_dir` passed
+
+        Export csv file to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
+        """
+        self._check_args(
+            file_path, s3_bucket, s3_bucket_dir, schema, table, delete_s3_after, delete_file_after
+        )
         self._check_process()
         kwargs = {
             "file_path": file_path,
@@ -118,6 +137,9 @@ class QueueExporter:
             "s3_bucket_dir": s3_bucket_dir,
             "schema": schema,
             "table": table,
+            "delete_file_after": delete_file_after,
+            "delete_s3_after": delete_s3_after,
+            "secret_id": secret_id,
         }
         item = QueueItem(item_type="file", kwargs=kwargs)
         self._queue.put(item)
@@ -133,31 +155,52 @@ class QueueExporter:
         s3_bucket_dir: Optional[str] = None,
         schema: Optional[str] = None,
         table: Optional[str] = None,
+        delete_file_after: bool = False,
+        delete_s3_after: bool = False,
+        secret_id: str = "prod/redshift/analytics",
     ) -> None:
-        filename = os.path.basename(file_path)
-        if ".csv" in file_path.lower():
-            df.to_csv(file_path, index=False, columns=columns)
+        if s3_bucket or s3_bucket_dir or not delete_file_after:
+            if ".csv" in file_path.lower():
+                df.to_csv(file_path, index=False, columns=columns)
+            else:
+                df.to_pickle(file_path)
+            logger.info(f"Saved df to {os.path.basename(file_path)} ({len(df)} rows)")
+        if s3_bucket and s3_bucket_dir:
+            self._export_file(
+                file_path,
+                separator=separator,
+                s3_bucket=s3_bucket,
+                s3_bucket_dir=s3_bucket_dir,
+                schema=schema,
+                table=table,
+                delete_file_after=delete_file_after,
+                delete_s3_after=delete_s3_after,
+                secret_id=secret_id,
+            )
         else:
-            df.to_pickle(file_path)
-        logger.info(f"Saved df to {filename} ({len(df)} rows)")
-        self._export_file(
-            file_path,
-            separator=separator,
-            s3_bucket=s3_bucket,
-            s3_bucket_dir=s3_bucket_dir,
-            schema=schema,
-            table=table,
-        )
+            engine = aws.connection.create_engine(secret_id=secret_id)
+            with engine.connect() as connection, connection.begin():
+                df.to_sql(
+                    table,
+                    con=connection,
+                    schema=schema,
+                    index=False,
+                    if_exists="append",
+                    method="multi",
+                )
 
     def _export_file(
         self,
         file_path: str,
+        s3_bucket: str,
+        s3_bucket_dir: str,
         *,
         separator: str = ",",
-        s3_bucket: Optional[str] = None,
-        s3_bucket_dir: Optional[str] = None,
         schema: Optional[str] = None,
         table: Optional[str] = None,
+        delete_file_after: bool = False,
+        delete_s3_after: bool = False,
+        secret_id: str = "prod/redshift/analytics",
     ) -> None:
         if schema and table and ".csv" in file_path.lower():
             aws.db.upload_csv(
@@ -165,12 +208,16 @@ class QueueExporter:
                 schema=schema,
                 table=table,
                 separator=separator,
-                bucket=s3_bucket or self._temp_s3_bucket,
-                bucket_dir=s3_bucket_dir or self._temp_s3_bucket_dir,
-                delete_s3_after=(s3_bucket is None or s3_bucket_dir is None),
+                bucket=s3_bucket,
+                bucket_dir=s3_bucket_dir,
+                delete_s3_after=delete_s3_after,
+                secret_id=secret_id,
             )
-        elif s3_bucket and s3_bucket_dir:
+        else:
             aws.s3.upload_file(file_path, bucket=s3_bucket, bucket_dir=s3_bucket_dir)
+        if delete_file_after:
+            os.remove(file_path)
+            logger.info(f"Removed {os.path.basename(file_path)}")
 
     def _worker(self) -> None:
         while True:
@@ -194,13 +241,19 @@ class QueueExporter:
         s3_bucket_dir: Optional[str],
         schema: Optional[str],
         table: Optional[str],
+        delete_s3_after: Optional[bool],
+        delete_file_after: Optional[bool],
     ) -> None:
         if sum(1 for arg in [s3_bucket, s3_bucket_dir] if arg is None) == 1:
             raise ValueError("Pass both s3_bucket and s3_bucket_dir arguments for S3 export")
         if sum(1 for arg in [schema, table] if arg is None) == 1:
             raise ValueError("Pass both schema and table arguments for DB export")
-        if schema and table and ".csv" not in file_path.lower():
-            raise ValueError("Only csv files can be exported to DB")
+        if not schema and not table and delete_s3_after:
+            raise ValueError("Only files exported to DB via S3 can be deleted from S3")
+        if not schema and not table and not s3_bucket and not s3_bucket_dir and delete_file_after:
+            raise ValueError("Only files exported to DB or S3 can be deleted")
+        if schema and table and s3_bucket and s3_bucket_dir and ".csv" not in file_path.lower():
+            raise ValueError("Only csv files can be exported to DB via S3")
 
     def _check_process(self) -> None:
         if not self._process.is_alive():
