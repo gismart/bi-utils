@@ -126,7 +126,9 @@ class QueueExporter:
         
         Exportes csv file to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
         """
-        self._check_args(file_path, s3_bucket, s3_bucket_dir, schema, table, delete_s3_after)
+        self._check_args(
+            file_path, s3_bucket, s3_bucket_dir, schema, table, delete_s3_after, delete_file_after
+        )
         self._check_process()
         kwargs = {
             "file_path": file_path,
