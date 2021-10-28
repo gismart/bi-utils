@@ -177,7 +177,7 @@ class QueueExporter:
                 delete_s3_after=delete_s3_after,
                 secret_id=secret_id,
             )
-        else:
+        elif schema and table:
             engine = aws.connection.create_engine(secret_id=secret_id)
             with engine.connect() as connection, connection.begin():
                 df.to_sql(
