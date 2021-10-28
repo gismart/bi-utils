@@ -82,9 +82,9 @@ class QueueExporter:
         Save dataframe to `filepath` if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` not passed
 
         Export dataframe to S3 if `s3_bucket` and `s3_bucket_dir` passed
-        
+
         Export dataframe to DB if `schema` and `table` passed
-        
+
         Export dataframe to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
         """
         self._check_args(
@@ -123,7 +123,7 @@ class QueueExporter:
     ) -> None:
         """
         Export file to S3 if `s3_bucket` and `s3_bucket_dir` passed
-        
+
         Exportes csv file to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
         """
         self._check_args(
