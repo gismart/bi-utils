@@ -125,7 +125,7 @@ def upload_data(
     """Save data to csv and upload it to RedShift via S3"""
     filename = os.path.basename(csv_path)
     filedir = os.path.dirname(csv_path)
-    if not os.path.exists(filedir):
+    if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
     data.to_csv(csv_path, index=False, columns=columns)
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
