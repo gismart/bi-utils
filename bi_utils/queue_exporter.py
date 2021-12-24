@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import os
+import logging
 import pandas as pd
 import dataclasses as dc
 import multiprocessing as mp
 from typing import Any, Dict, Optional, Sequence, Type
 from types import TracebackType
 
-from .logger import get_logger
 from . import aws
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dc.dataclass

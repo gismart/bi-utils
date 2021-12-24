@@ -2,17 +2,17 @@ import os
 import glob
 import shutil
 import locopy
+import logging
 import posixpath
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
 
-from ..logger import get_logger
 from .. import files, sql
 from . import connection
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def upload_csv(
@@ -125,7 +125,7 @@ def upload_data(
     """Save data to csv and upload it to RedShift via S3"""
     filename = os.path.basename(csv_path)
     filedir = os.path.dirname(csv_path)
-    if not os.path.exists(filedir):
+    if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
     data.to_csv(csv_path, index=False, columns=columns)
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
