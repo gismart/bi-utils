@@ -2,17 +2,17 @@ import os
 import glob
 import shutil
 import locopy
+import logging
 import posixpath
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
 
-from ..logger import get_logger
 from .. import files, sql
 from . import connection
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def upload_csv(

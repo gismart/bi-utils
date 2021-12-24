@@ -1,10 +1,9 @@
+import logging
 import pandas as pd
 from typing import Dict, Hashable, Optional, Sequence, Tuple, Union
 
-from .logger import get_logger
 
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def df_test(

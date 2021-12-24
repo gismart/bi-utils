@@ -1,11 +1,10 @@
 import os
 import boto3
+import logging
 from botocore.exceptions import ClientError
 
-from ..logger import get_logger
 
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def upload_file(

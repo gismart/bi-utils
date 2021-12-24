@@ -5,14 +5,10 @@ FORMAT = "[%(name)s] [%(asctime)s] %(levelname)s: %(message)s"
 DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 
-def get_logger(name: str, level: str = "info") -> logging.Logger:
-    """Create logger with basic config"""
+def setup_root_logger(name: str = "bi_utils", level: str = "info") -> None:
+    logging.basicConfig(format=FORMAT, datefmt=DATEFMT, level=logging.INFO)
     logger = logging.getLogger(name)
     logger.setLevel(level.upper())
-    return logger
-
-
-def config_root_logger(logger: logging.Logger) -> None:
     if logger.handlers:
         logger.handlers.clear()
     formatter = logging.Formatter(FORMAT, DATEFMT)
@@ -22,5 +18,5 @@ def config_root_logger(logger: logging.Logger) -> None:
     logger.propagate = False
 
 
-config_root_logger(get_logger("bi_utils"))
-config_root_logger(get_logger("locopy", level="warning"))
+setup_root_logger()
+setup_root_logger("locopy", level="warning")

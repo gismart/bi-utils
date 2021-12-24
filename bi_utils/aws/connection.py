@@ -1,14 +1,14 @@
 import json
 import boto3
+import logging
 import psycopg2
 import sqlalchemy as sa
 from typing import Dict, Optional
 
-from ..logger import get_logger
 from .locopy import locopy
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 cached_creds: Dict[str, dict] = {}
 
 
