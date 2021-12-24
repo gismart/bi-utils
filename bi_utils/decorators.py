@@ -12,13 +12,8 @@ def retry(
     sleep_secs: int = 0,
 ) -> Callable:
     """
-    Retry Decorator
-    Retries the wrapped function/method `times` times if the exceptions listed
-    in ``exceptions`` are thrown
-    :param times: The number of times to repeat the wrapped function/method
-    :type times: Int
-    :param Exceptions: Lists of exceptions that trigger a retry attempt
-    :type Exceptions: Tuple of Exceptions
+    Retry the wrapped function `times` times if the exceptions listed
+    in `exceptions` are thrown. Sleep for `sleep_secs` seconds every time
     """
     def decorator(func):
         def newfn(*args, **kwargs):
