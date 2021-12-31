@@ -38,7 +38,7 @@ def upload_csv(
             s3_folder=bucket_dir,
             table_name=table_columns,
             delim=separator,
-            copy_options=["IGNOREHEADER AS 1", "REMOVEQUOTES"],
+            copy_options=["IGNOREHEADER AS 1", "FORMAT AS CSV"],
             delete_s3_after=delete_s3_after,
             compress=False,
         )
@@ -127,7 +127,7 @@ def upload_data(
     filedir = os.path.dirname(csv_path)
     if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
-    data.to_csv(csv_path, index=False, columns=columns)
+    data.to_csv(csv_path, index=False, columns=columns, sep=separator)
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
     upload_csv(
         csv_path=csv_path,
