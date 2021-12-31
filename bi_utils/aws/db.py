@@ -38,7 +38,7 @@ def upload_csv(
             s3_folder=bucket_dir,
             table_name=table_columns,
             delim=separator,
-            copy_options=["IGNOREHEADER AS 1", "REMOVEQUOTES"],
+            copy_options=["IGNOREHEADER AS 1", "FORMAT AS CSV"],
             delete_s3_after=delete_s3_after,
             compress=False,
         )
