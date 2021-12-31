@@ -127,7 +127,7 @@ def upload_data(
     filedir = os.path.dirname(csv_path)
     if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
-    data.to_csv(csv_path, index=False, columns=columns)
+    data.to_csv(csv_path, index=False, columns=columns, sep=separator)
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
     upload_csv(
         csv_path=csv_path,
