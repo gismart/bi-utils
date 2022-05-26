@@ -1,5 +1,4 @@
-boto3>=1.15.11
-locopy>=0.3.8
+locopy>=0.4.1
 numpy>=1.19.2
 pandas>=1.1.0
 psutil>=5.7.0
