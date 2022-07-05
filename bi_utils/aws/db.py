@@ -267,8 +267,11 @@ def _read_chunks(
                 dtype=dtype,
                 low_memory=False,
             )
-            yield chunk
-            logger.debug(f"Loaded chunk #{i + 1}")
+            if chunk.empty:
+                logger.debug(f"Chunk #{i + 1} is empty")
+            else:
+                logger.debug(f"Loaded chunk #{i + 1}")
+                yield chunk
             os.remove(filename)
     finally:
         if temp_dir:
