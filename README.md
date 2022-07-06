@@ -15,12 +15,12 @@ Add `--upgrade` option to update existing package to a new version
 Specify package link in your `requirements.txt`:
 
 ```txt
-git+https://github.com/gismart/bi-utils@0.9.3#egg=bi-utils-gismart
+git+https://github.com/gismart/bi-utils@0.9.4#egg=bi-utils-gismart
 ```
 
 ### Usage
 
-If you have your credentials on AWS add the following environment variables to use DB/S3 functionality:
+If you have your credentials on AWS add the following environment variables to use RedShift/S3 functionality:
 
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
