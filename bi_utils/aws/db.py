@@ -185,6 +185,9 @@ def download_data(
     )
     if chunking:
         return chunks
+    chunks = list(chunks)
+    if not chunks:
+        return pd.DataFrame()
     data = pd.concat(chunks, ignore_index=True)
     for bool_col in parse_bools:
         dtype[bool_col] = "boolean"
