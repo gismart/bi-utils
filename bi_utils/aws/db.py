@@ -83,7 +83,7 @@ def download_csv(
             s3_folder=bucket_dir,
             export_path=False,
             raw_unload_path=data_dir,
-            delimiter=separator,
+            delim=separator,
             delete_s3_after=delete_s3_after,
             parallel_off=False,
             unload_options=["CSV", "HEADER", "GZIP", "PARALLEL ON", "ALLOWOVERWRITE"],
