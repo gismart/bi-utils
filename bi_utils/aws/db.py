@@ -27,6 +27,7 @@ def upload_csv(
     delete_s3_after: bool = True,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
     retries: int = 0,
 ) -> None:
     """Upload csv file to S3 and copy to Redshift"""
@@ -47,7 +48,7 @@ def upload_csv(
         columns = files.csv_columns(csv_path, separator=separator)
     table_columns = f'{schema}.{table} ({",".join(columns)})'
     bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
-    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
+    with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
                 upload(redshift_locopy)
@@ -72,6 +73,7 @@ def download_csv(
     delete_s3_after: bool = True,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
     retries: int = 0,
 ) -> Sequence[str]:
     """Copy data from RedShift to S3 and download csv files up to 6.2 GB"""
@@ -92,7 +94,7 @@ def download_csv(
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
     bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
-    with connection.get_redshift(secret_id, database=database) as redshift_locopy:
+    with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
                 download(redshift_locopy)
@@ -120,6 +122,7 @@ def upload_data(
     remove_csv: bool = False,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
     retries: int = 0,
 ) -> None:
     """Save data to csv and upload it to RedShift via S3"""
@@ -139,6 +142,7 @@ def upload_data(
         columns=columns,
         secret_id=secret_id,
         database=database,
+        host=host,
         retries=retries,
     )
     if remove_csv:
@@ -159,6 +163,7 @@ def download_data(
     chunking: bool = False,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
     retries: int = 0,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     """Download data from Redshift via S3"""
@@ -173,6 +178,7 @@ def download_data(
         bucket_dir=bucket_dir,
         secret_id=secret_id,
         database=database,
+        host=host,
         retries=retries,
     )
     chunks = _read_chunks(
@@ -203,6 +209,7 @@ def update(
     params_where: Optional[dict],
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
 ) -> None:
     """
     Update data in `table` in `schema`.
@@ -210,7 +217,7 @@ def update(
     """
     if params_where is None:
         params_where = {}
-    with connection.connect(schema, secret_id=secret_id, database=database) as conn:
+    with connection.connect(schema, secret_id=secret_id, database=database, host=host) as conn:
         with conn.cursor() as cursor:
             set_str = sql.build_set(**params_set)
             where_str = sql.build_where(**params_where)
@@ -224,6 +231,7 @@ def delete(
     schema: str,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
     **conditions: Any,
 ) -> None:
     """Delete data from `table` in `schema` with keyword arguments `conditions`.
@@ -231,7 +239,7 @@ def delete(
     include condition in case if it is an iterable"""
     if not conditions:
         raise ValueError("Pass at least 1 equal condition as keyword argument")
-    with connection.connect(schema, secret_id=secret_id, database=database) as conn:
+    with connection.connect(schema, secret_id=secret_id, database=database, host=host) as conn:
         with conn.cursor() as cursor:
             where_str = sql.build_where(**conditions)
             query = f"DELETE FROM {schema}.{table} {where_str}"
