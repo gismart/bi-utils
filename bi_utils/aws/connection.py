@@ -29,13 +29,15 @@ def get_creds(secret_id: str = "prod/redshift/analytics") -> dict:
 def get_redshift(
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
 ) -> locopy.Redshift:
     """Get locopy redshift connection"""
     creds = get_creds(secret_id)
     dbname = database or creds.get("dbname")
+    host = host or creds.get("host")
     redshift = locopy.Redshift(
         dbapi=psycopg2,
-        host=creds.get("host"),
+        host=host,
         port=creds.get("port"),
         dbname=dbname,
         user=creds.get("username"),
@@ -49,12 +51,14 @@ def create_engine(
     secret_id: str = "prod/redshift/analytics",
     drivername: str = "postgresql+psycopg2",
     database: Optional[str] = None,
+    host: Optional[str] = None,
 ) -> sa.engine.Engine:
     """Create AWS connection engine"""
     creds = get_creds(secret_id=secret_id)
     dbname = database or creds.get("dbname")
+    host = host or creds.get("host")
     conn_str = sa.engine.url.URL.create(
-        host=creds.get("host"),
+        host=host,
         port=creds.get("port"),
         database=dbname,
         username=creds.get("username"),
@@ -70,12 +74,14 @@ def connect(
     schema: Optional[str] = None,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
+    host: Optional[str] = None,
 ) -> psycopg2.extensions.connection:
     """Connect to db via psycopg2"""
     creds = get_creds(secret_id=secret_id)
     dbname = database or creds.get("dbname")
+    host = host or creds.get("host")
     conn = psycopg2.connect(
-        host=creds.get("host"),
+        host=host,
         port=creds.get("port"),
         dbname=dbname,
         user=creds.get("username"),
