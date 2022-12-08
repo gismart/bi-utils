@@ -43,3 +43,27 @@ def download_file(
     except ClientError as e:
         logger.error(f"Failed to download {filename}: {e}")
         return False
+
+
+def download_dir(
+    bucket_dir_path: str,
+    dir_path: str,
+    *,
+    bucket: str = "gismart-analytics",
+) -> bool:
+    """Download directory contents from S3 without subfolders"""
+    resource = boto3.resource("s3")
+    bucket_resource = resource.Bucket(bucket)
+    try:
+        for obj in bucket_resource.objects.filter(Prefix=bucket_dir_path):
+            filename = os.path.basename(obj.key)
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            file_path = os.path.join(dir_path, filename)
+            bucket_resource.download_file(obj.key, file_path)
+            logger.debug(f"{filename} downloaded from S3")
+        logger.info(f"{bucket_dir_path} downloaded from S3")
+        return True
+    except ClientError as e:
+        logger.error(f"Failed to download {bucket_dir_path}: {e}")
+        return False
