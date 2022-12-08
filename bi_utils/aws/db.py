@@ -167,8 +167,6 @@ def download_data(
     retries: int = 0,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     """Download data from Redshift via S3"""
-    dtype = dtype or {}
-    parse_bools = parse_bools or []
     temp_path = _add_timestamp_dir(temp_dir)
     filenames = download_csv(
         query=query,
@@ -181,13 +179,52 @@ def download_data(
         host=host,
         retries=retries,
     )
+    data = read_csv_data(
+        filenames,
+        separator=separator,
+        parse_dates=parse_dates,
+        parse_bools=parse_bools,
+        dtype=dtype,
+        chunking=chunking,
+        remove_dir=True,
+    )
+    return data
+
+
+def read_csv_data(
+    csv_path: Union[str, Sequence[str]],
+    *,
+    separator: str = ",",
+    parse_dates: Optional[Sequence[str]] = None,
+    parse_bools: Optional[Sequence[str]] = None,
+    dtype: Optional[dict] = None,
+    chunking: bool = False,
+    remove_dir: bool = False,
+) -> pd.DataFrame:
+    """Read data from csv chunks"""
+    dtype = dtype or {}
+    parse_bools = parse_bools or []
+    if isinstance(csv_path, str):
+        if os.path.isfile(csv_path):
+            filenames = [csv_path]
+            csv_dir = os.path.dirname(csv_path)
+        else:
+            filenames = [
+                os.path.join(csv_path, filename)
+                for filename in os.listdir(csv_path)
+                if os.path.isfile(os.path.join(csv_path, filename))
+            ]
+            csv_dir = csv_path
+    else:
+        filenames = csv_path
+        csv_dir = os.path.dirname(csv_path[0])
     chunks = _read_chunks(
         filenames,
         parse_bools=parse_bools,
         separator=separator,
         parse_dates=parse_dates,
         dtype=dtype,
-        temp_dir=temp_path,
+        temp_dir=csv_dir if remove_dir else None,
     )
     if chunking:
         return chunks
@@ -283,7 +320,8 @@ def _read_chunks(
             else:
                 logger.debug(f"Loaded chunk #{i + 1}")
                 yield chunk
-            os.remove(filename)
+            if temp_dir:
+                os.remove(filename)
     finally:
         if temp_dir:
             shutil.rmtree(temp_dir, ignore_errors=True)
