@@ -284,6 +284,20 @@ def delete(
     logger.info(f"Deleted data from {schema}.{table}")
 
 
+def get_columns(
+    table: str,
+    schema: str,
+    secret_id: str = "prod/redshift/analytics",
+    database: Optional[str] = None,
+    host: Optional[str] = None,
+) -> Sequence[str]:
+    with connection.connect(schema, secret_id=secret_id, database=database, host=host) as conn:
+        with conn.cursor() as cursor:
+            query = f"SELECT * FROM {schema}.{table} LIMIT 0"
+            cursor.execute(query)
+            return [desc[0] for desc in cursor.description]
+
+
 def _add_timestamp_dir(dir_path: str, postfix: str = "", posix: bool = False) -> str:
     timestamp = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f") + postfix
     if posix:

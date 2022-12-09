@@ -59,3 +59,8 @@ def test_upload_update_download():
     version2_rows = (downloaded_data["version"] == new_version).sum()
     assert version2_rows == 1
     db.delete(table, schema=schema, version=version)
+
+
+def test_get_columns():
+    db_columns = db.get_columns(table=table, schema=schema)
+    assert db_columns == ["text", "predict_dt", "version", "load_dttm"]
