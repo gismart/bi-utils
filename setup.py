@@ -9,7 +9,7 @@ with open("requirements.txt") as file:
 
 setuptools.setup(
     name="bi-utils-gismart",
-    version="0.13.0",
+    version="0.13.1",
     author="gismart",
     author_email="info@gismart.com",
     description="Utils for BI team",
