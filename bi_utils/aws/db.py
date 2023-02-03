@@ -232,8 +232,10 @@ def read_csv_data(
     if not chunks:
         return pd.DataFrame()
     data = pd.concat(chunks, ignore_index=True)
-    for bool_col in parse_bools:
-        dtype[bool_col] = "boolean"
+    dtype = {
+        **dtype,
+        **{bool_col: "boolean" for bool_col in parse_bools}
+    }
     data = data.astype(dtype)
     logger.info(f"Data is loaded from csv files ({len(data)} rows)")
     return data
