@@ -165,6 +165,7 @@ def download_data(
     database: Optional[str] = None,
     host: Optional[str] = None,
     retries: int = 0,
+    remove_csv: bool = True,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     """Download data from Redshift via S3"""
     temp_path = _add_timestamp_dir(temp_dir)
@@ -186,7 +187,7 @@ def download_data(
         parse_bools=parse_bools,
         dtype=dtype,
         chunking=chunking,
-        remove_dir=True,
+        remove_dir=remove_csv,
     )
     return data
 
