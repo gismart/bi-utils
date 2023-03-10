@@ -135,7 +135,7 @@ def upload_data(
     bucket: str = "gismart-analytics",
     bucket_dir: str = "dwh/temp",
     columns: Optional[Sequence] = None,
-    remove_csv: bool = False,
+    remove_file: bool = False,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
     host: Optional[str] = None,
@@ -149,7 +149,7 @@ def upload_data(
     if file_path.lower().endswith(".csv"):
         data.to_csv(file_path, index=False, columns=columns, sep=separator)
     elif file_path.lower().endswith(".parquet"):
-        data.to_parquet(file_path)
+        data.to_parquet(file_path, times="int96")
     else:
         raise ValueError(f"{filename} file extension is not supported")
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
@@ -166,7 +166,7 @@ def upload_data(
         host=host,
         retries=retries,
     )
-    if remove_csv:
+    if remove_file:
         os.remove(file_path)
         logger.info(f"{filename} is removed")
 
