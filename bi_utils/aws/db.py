@@ -141,7 +141,7 @@ def upload_data(
     host: Optional[str] = None,
     retries: int = 0,
 ) -> None:
-    """Save data to csv and upload it to RedShift via S3"""
+    """Save data to csv or parquet and upload it to RedShift via S3"""
     filename = os.path.basename(file_path)
     filedir = os.path.dirname(file_path)
     if filedir and not os.path.exists(filedir):
@@ -296,9 +296,11 @@ def delete(
     host: Optional[str] = None,
     **conditions: Any,
 ) -> None:
-    """Delete data from `table` in `schema` with keyword arguments `conditions`.
+    """
+    Delete data from `table` in `schema` with keyword arguments `conditions`.
     It will be equal condition in case if condition value has primitive type or
-    include condition in case if it is an iterable"""
+    include condition in case if it is an iterable
+    """
     if not conditions:
         raise ValueError("Pass at least 1 equal condition as keyword argument")
     with connection.connect(schema, secret_id=secret_id, database=database, host=host) as conn:
