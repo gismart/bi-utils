@@ -124,7 +124,7 @@ def download_files(
                     return []
                 raise error
             else:
-                logger.info("Data is downloaded to csv files")
+                logger.info(f"Data is downloaded to {file_format} files")
                 filenames = glob.glob(os.path.join(data_dir, "*_part_*"))
                 return filenames
 
@@ -267,7 +267,7 @@ def read_files(
         **{bool_col: "boolean" for bool_col in parse_bools}
     }
     data = data.astype(dtype)
-    logger.info(f"Data is loaded from csv files ({len(data)} rows)")
+    logger.info(f"Data is loaded from files ({len(data)} rows)")
     return data
 
 
