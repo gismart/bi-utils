@@ -17,7 +17,7 @@ def test_upload_download_file(data_path):
     assert local_data.equals(downloaded_data)
 
 
-def test_upload_file_download_dir_read_csv_data(data_path):
+def test_upload_file_download_dir_read_files(data_path):
     filename = os.path.basename(data_path)
     timestamp_dir_name = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
     bucket_dir = "dwh/temp/" + timestamp_dir_name
@@ -25,6 +25,6 @@ def test_upload_file_download_dir_read_csv_data(data_path):
     download_dir = f"/tmp/{timestamp_dir_name}/{filename}/"
     s3.upload_file(data_path, bucket_path)
     s3.download_dir(bucket_dir, download_dir)
-    downloaded_data = db.read_csv_data(download_dir)
+    downloaded_data = db.read_files(download_dir)
     local_data = pd.read_csv(data_path)
     assert downloaded_data.equals(local_data)
