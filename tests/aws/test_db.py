@@ -91,6 +91,25 @@ def test_upload_update_download(file_format):
     db.delete(table, schema=schema, version=version)
 
 
+@pytest.mark.parametrize(
+    "file_format",
+    ["csv", "parquet"],
+)
+def test_download_empty(file_format):
+    version = 1
+    db.delete(table, schema=schema, version=version)
+    query = f"""
+        SELECT *
+        FROM {schema}.{table}
+        WHERE version = {version}
+    """
+    downloaded_data = db.download_data(
+        query,
+        file_format=file_format,
+    )
+    assert downloaded_data.empty
+
+
 def test_get_columns():
     db_columns = db.get_columns(table=table, schema=schema)
     assert db_columns == ["text", "predict_dt", "load_dttm", "version"]
