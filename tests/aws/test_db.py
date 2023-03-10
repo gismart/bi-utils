@@ -36,14 +36,14 @@ def test_upload_download_delete(file_format):
         SELECT text, predict_dt, version, load_dttm
         FROM {schema}.{table}
         WHERE version = {version}
-        ORDER BY predict_dt
     """
     downloaded_data = db.download_data(
         query,
         file_format=file_format,
         parse_dates=["predict_dt", "load_dttm"],
         dtype={"version": "int"},
-    )
+        remove_files=False,
+    ).sort_values("predict_dt")
     assert downloaded_data.equals(data)
     db.delete(table, schema=schema, version=version)
     downloaded_data = db.download_data(query, parse_dates=["predict_dt"])
@@ -77,14 +77,13 @@ def test_upload_update_download(file_format):
         SELECT text, predict_dt, version, load_dttm
         FROM {schema}.{table}
         WHERE version IN ({version}, {new_version})
-        ORDER BY predict_dt
     """
     downloaded_data = db.download_data(
         query,
         file_format=file_format,
         parse_dates=["predict_dt", "load_dttm"],
         dtype={"version": "int"},
-    )
+    ).sort_values("predict_dt")
     assert not downloaded_data.equals(data)
     version2_rows = (downloaded_data["version"] == new_version).sum()
     assert version2_rows == 1
