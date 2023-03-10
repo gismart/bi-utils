@@ -119,6 +119,10 @@ def download_files(
                     raise error
                 else:
                     logger.warning(f"Failed download attempt #{attempt_number + 1}")
+            except Exception as error:
+                if "no files" in str(error).lower():
+                    return []
+                raise error
             else:
                 logger.info("Data is downloaded to csv files")
                 filenames = glob.glob(os.path.join(data_dir, "*_part_*"))
@@ -202,15 +206,18 @@ def download_data(
         host=host,
         retries=retries,
     )
-    data = read_files(
-        filenames,
-        separator=separator,
-        parse_dates=parse_dates,
-        parse_bools=parse_bools,
-        dtype=dtype,
-        chunking=chunking,
-        remove_dir=remove_files,
-    )
+    if filenames:
+        data = read_files(
+            filenames,
+            separator=separator,
+            parse_dates=parse_dates,
+            parse_bools=parse_bools,
+            dtype=dtype,
+            chunking=chunking,
+            remove_dir=remove_files,
+        )
+    else:
+        data = [pd.DataFrame()] if chunking else pd.DataFrame()
     return data
 
 
