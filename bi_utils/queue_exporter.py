@@ -256,7 +256,7 @@ class QueueExporter:
         if not schema and not table and not s3_bucket and not s3_bucket_dir and delete_file_after:
             raise ValueError("Only files exported to DB or S3 can be deleted")
         if schema and table and s3_bucket and s3_bucket_dir and (
-            ".csv" not in file_path.lower() or ".parquet" not in file_path.lower()
+            ".csv" not in file_path.lower() and ".parquet" not in file_path.lower()
         ):
             raise ValueError("Only csv or parquet files can be exported to DB via S3")
 
