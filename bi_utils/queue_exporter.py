@@ -164,7 +164,7 @@ class QueueExporter:
             if ".csv" in file_path.lower():
                 df.to_csv(file_path, index=False, columns=columns)
             elif ".parquet" in file_path.lower():
-                df.to_parquet(file_path)
+                df.to_parquet(file_path, times="int96")
             else:
                 df.to_pickle(file_path)
             logger.info(f"Saved df to {os.path.basename(file_path)} ({len(df)} rows)")
