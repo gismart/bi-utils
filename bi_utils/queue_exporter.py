@@ -124,7 +124,8 @@ class QueueExporter:
         """
         Export file to S3 if `s3_bucket` and `s3_bucket_dir` passed
 
-        Export csv file to DB via S3 if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
+        Export csv or parquet file to DB via S3
+        if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` passed
         """
         self._check_args(
             file_path, s3_bucket, s3_bucket_dir, schema, table, delete_s3_after, delete_file_after
@@ -162,6 +163,8 @@ class QueueExporter:
         if s3_bucket or s3_bucket_dir or not delete_file_after:
             if ".csv" in file_path.lower():
                 df.to_csv(file_path, index=False, columns=columns)
+            elif ".parquet" in file_path.lower():
+                df.to_parquet(file_path, times="int96")
             else:
                 df.to_pickle(file_path)
             logger.info(f"Saved df to {os.path.basename(file_path)} ({len(df)} rows)")
@@ -202,8 +205,8 @@ class QueueExporter:
         delete_s3_after: bool = False,
         secret_id: str = "prod/redshift/analytics",
     ) -> None:
-        if schema and table and ".csv" in file_path.lower():
-            aws.db.upload_csv(
+        if schema and table and (".csv" in file_path.lower() or ".parquet" in file_path.lower()):
+            aws.db.upload_file(
                 file_path,
                 schema=schema,
                 table=table,
@@ -252,8 +255,10 @@ class QueueExporter:
             raise ValueError("Only files exported to DB via S3 can be deleted from S3")
         if not schema and not table and not s3_bucket and not s3_bucket_dir and delete_file_after:
             raise ValueError("Only files exported to DB or S3 can be deleted")
-        if schema and table and s3_bucket and s3_bucket_dir and ".csv" not in file_path.lower():
-            raise ValueError("Only csv files can be exported to DB via S3")
+        if schema and table and s3_bucket and s3_bucket_dir and (
+            ".csv" not in file_path.lower() and ".parquet" not in file_path.lower()
+        ):
+            raise ValueError("Only csv or parquet files can be exported to DB via S3")
 
     def _check_process(self) -> None:
         if not self._process.is_alive():

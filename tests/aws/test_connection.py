@@ -1,3 +1,5 @@
+from sqlalchemy import text
+
 from bi_utils.aws import connection
 
 
@@ -16,7 +18,7 @@ def test_get_redshift():
 def test_create_engine():
     engine = connection.create_engine()
     with engine.connect() as conn:
-        result = list(conn.execute("SELECT 1"))
+        result = list(conn.execute(text("SELECT 1")))
         assert len(result) == 1
 
 
