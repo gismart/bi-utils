@@ -351,6 +351,10 @@ def _read_chunks(
 ) -> Iterator[pd.DataFrame]:
     boolean_values = {"t": True, "f": False}
     converters = {col: lambda value: boolean_values.get(value, pd.NA) for col in parse_bools}
+    full_dtype = {
+        **dtype,
+        **{bool_col: "boolean" for bool_col in parse_bools}
+    }
     try:
         for i, filename in enumerate(filenames):
             if filename.lower().endswith((".csv", ".gz")):
@@ -365,7 +369,7 @@ def _read_chunks(
                     low_memory=False,
                 )
             elif filename.lower().endswith(".parquet"):
-                chunk = pd.read_parquet(filename)
+                chunk = pd.read_parquet(filename).astype(full_dtype)
             else:
                 raise ValueError(f"{os.path.basename(filename)} file extension is not supported")
             if chunk.empty:
