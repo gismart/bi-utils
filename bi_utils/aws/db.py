@@ -217,7 +217,7 @@ def download_data(
             remove_dir=remove_files,
         )
     else:
-        data = [pd.DataFrame()] if chunking else pd.DataFrame()
+        data = (df for df in [pd.DataFrame()]) if chunking else pd.DataFrame()
     return data
 
 
