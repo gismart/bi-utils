@@ -83,6 +83,7 @@ def download_files(
     separator: str = ",",
     bucket: str = "gismart-analytics",
     bucket_dir: str = "dwh/temp",
+    delete_s3_before: bool = False,
     delete_s3_after: bool = True,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
@@ -94,12 +95,16 @@ def download_files(
     """Copy data from RedShift to S3 and download csv or parquet files up to 6.2 GB"""
 
     if file_format.lower() == "csv":
-        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON", "ALLOWOVERWRITE"]
+        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON"]
     elif file_format.lower() == "parquet":
         separator = None
-        unload_options = ["PARQUET", "PARALLEL ON", "ALLOWOVERWRITE"]
+        unload_options = ["PARQUET", "PARALLEL ON"]
     else:
         raise ValueError(f"{file_format} file format is not supported")
+    if delete_s3_before:
+        unload_options.append("CLEANPATH")
+    else:
+        unload_options.append("ALLOWOVERWRITE")
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
     if add_timestamp_dir:
@@ -202,6 +207,7 @@ def download_data(
     host: Optional[str] = None,
     retries: int = 0,
     remove_files: bool = True,
+    delete_s3_before: bool = False,
     delete_s3_after: bool = True,
     add_timestamp_dir: bool = True,
     add_s3_timestamp_dir: bool = True,
@@ -218,6 +224,7 @@ def download_data(
         database=database,
         host=host,
         retries=retries,
+        delete_s3_before=delete_s3_before,
         delete_s3_after=delete_s3_after,
         add_timestamp_dir=add_timestamp_dir,
         add_s3_timestamp_dir=add_s3_timestamp_dir,
