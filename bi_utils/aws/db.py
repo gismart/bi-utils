@@ -144,6 +144,7 @@ def upload_data(
     database: Optional[str] = None,
     host: Optional[str] = None,
     retries: int = 0,
+    delete_s3_after: bool = True,
 ) -> None:
     """Save data to csv or parquet and upload it to RedShift via S3"""
     filename = os.path.basename(file_path)
@@ -169,6 +170,7 @@ def upload_data(
         database=database,
         host=host,
         retries=retries,
+        delete_s3_after=delete_s3_after,
     )
     if remove_file:
         os.remove(file_path)
@@ -192,6 +194,7 @@ def download_data(
     host: Optional[str] = None,
     retries: int = 0,
     remove_files: bool = True,
+    delete_s3_after: bool = True,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     """Download data from Redshift via S3"""
     filenames = download_files(
@@ -205,6 +208,7 @@ def download_data(
         database=database,
         host=host,
         retries=retries,
+        delete_s3_after=delete_s3_after,
     )
     if filenames:
         data = read_files(
