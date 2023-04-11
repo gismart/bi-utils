@@ -52,6 +52,8 @@ def upload_file(
         table_name += f" ({','.join(columns)})"
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
+    elif not bucket_dir.endswith("/"):
+        bucket_dir += "/"
     with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -107,6 +109,8 @@ def download_files(
         unload_options.append("ALLOWOVERWRITE")
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
+    elif not bucket_dir.endswith("/"):
+        bucket_dir += "/"
     if add_timestamp_dir:
         data_dir = _add_timestamp_dir(data_dir or os.getcwd())
     if data_dir and not os.path.exists(data_dir):
