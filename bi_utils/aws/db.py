@@ -30,6 +30,7 @@ def upload_file(
     database: Optional[str] = None,
     host: Optional[str] = None,
     retries: int = 0,
+    add_s3_timestamp_dir: bool = True,
 ) -> None:
     """Upload csv or parquet file to S3 and copy to Redshift"""
 
@@ -49,7 +50,8 @@ def upload_file(
     table_name = f"{schema}.{table}"
     if columns:
         table_name += f" ({','.join(columns)})"
-    bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
+    if add_s3_timestamp_dir:
+        bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
     with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -86,6 +88,8 @@ def download_files(
     database: Optional[str] = None,
     host: Optional[str] = None,
     retries: int = 0,
+    add_timestamp_dir: bool = True,
+    add_s3_timestamp_dir: bool = True,
 ) -> Sequence[str]:
     """Copy data from RedShift to S3 and download csv or parquet files up to 6.2 GB"""
 
@@ -96,8 +100,10 @@ def download_files(
         unload_options = ["PARQUET", "PARALLEL ON", "ALLOWOVERWRITE"]
     else:
         raise ValueError(f"{file_format} file format is not supported")
-    bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
-    data_dir = _add_timestamp_dir(data_dir or os.getcwd())
+    if add_s3_timestamp_dir:
+        bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
+    if add_timestamp_dir:
+        data_dir = _add_timestamp_dir(data_dir or os.getcwd())
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
     with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
@@ -145,6 +151,7 @@ def upload_data(
     host: Optional[str] = None,
     retries: int = 0,
     delete_s3_after: bool = True,
+    add_s3_timestamp_dir: bool = True,
 ) -> None:
     """Save data to csv or parquet and upload it to RedShift via S3"""
     filename = os.path.basename(file_path)
@@ -171,6 +178,7 @@ def upload_data(
         host=host,
         retries=retries,
         delete_s3_after=delete_s3_after,
+        add_s3_timestamp_dir=add_s3_timestamp_dir,
     )
     if remove_file:
         os.remove(file_path)
@@ -195,6 +203,8 @@ def download_data(
     retries: int = 0,
     remove_files: bool = True,
     delete_s3_after: bool = True,
+    add_timestamp_dir: bool = True,
+    add_s3_timestamp_dir: bool = True,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     """Download data from Redshift via S3"""
     filenames = download_files(
@@ -209,6 +219,8 @@ def download_data(
         host=host,
         retries=retries,
         delete_s3_after=delete_s3_after,
+        add_timestamp_dir=add_timestamp_dir,
+        add_s3_timestamp_dir=add_s3_timestamp_dir,
     )
     if filenames:
         data = read_files(
