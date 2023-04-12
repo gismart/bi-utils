@@ -161,6 +161,7 @@ def upload_data(
     retries: int = 0,
     delete_s3_after: bool = True,
     add_s3_timestamp_dir: bool = True,
+    partition_cols: Optional[Sequence] = None,
 ) -> None:
     """Save data to csv or parquet and upload it to RedShift via S3"""
     filename = os.path.basename(file_path)
@@ -168,9 +169,11 @@ def upload_data(
     if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
     if file_path.lower().endswith(".csv"):
+        if partition_cols:
+            logger.warning(f"Partitions are not supported for csv files: {filename}")
         data.to_csv(file_path, index=False, columns=columns, sep=separator)
     elif file_path.lower().endswith(".parquet"):
-        data.to_parquet(file_path, times="int96")
+        data.to_parquet(file_path, partition_cols=partition_cols, times="int96")
     else:
         raise ValueError(f"{filename} file extension is not supported")
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
