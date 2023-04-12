@@ -52,6 +52,8 @@ def upload_file(
         table_name += f" ({','.join(columns)})"
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
+    elif not bucket_dir.endswith("/"):
+        bucket_dir += "/"
     with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
         for attempt_number in range(retries + 1):
             try:
@@ -83,6 +85,7 @@ def download_files(
     separator: str = ",",
     bucket: str = "gismart-analytics",
     bucket_dir: str = "dwh/temp",
+    delete_s3_before: bool = False,
     delete_s3_after: bool = True,
     secret_id: str = "prod/redshift/analytics",
     database: Optional[str] = None,
@@ -94,14 +97,20 @@ def download_files(
     """Copy data from RedShift to S3 and download csv or parquet files up to 6.2 GB"""
 
     if file_format.lower() == "csv":
-        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON", "ALLOWOVERWRITE"]
+        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON"]
     elif file_format.lower() == "parquet":
         separator = None
-        unload_options = ["PARQUET", "PARALLEL ON", "ALLOWOVERWRITE"]
+        unload_options = ["PARQUET", "PARALLEL ON"]
     else:
         raise ValueError(f"{file_format} file format is not supported")
+    if delete_s3_before:
+        unload_options.append("CLEANPATH")
+    else:
+        unload_options.append("ALLOWOVERWRITE")
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
+    elif not bucket_dir.endswith("/"):
+        bucket_dir += "/"
     if add_timestamp_dir:
         data_dir = _add_timestamp_dir(data_dir or os.getcwd())
     if data_dir and not os.path.exists(data_dir):
@@ -152,6 +161,7 @@ def upload_data(
     retries: int = 0,
     delete_s3_after: bool = True,
     add_s3_timestamp_dir: bool = True,
+    partition_cols: Optional[Sequence] = None,
 ) -> None:
     """Save data to csv or parquet and upload it to RedShift via S3"""
     filename = os.path.basename(file_path)
@@ -159,9 +169,11 @@ def upload_data(
     if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
     if file_path.lower().endswith(".csv"):
+        if partition_cols:
+            logger.warning(f"Partitions are not supported for csv files: {filename}")
         data.to_csv(file_path, index=False, columns=columns, sep=separator)
     elif file_path.lower().endswith(".parquet"):
-        data.to_parquet(file_path, times="int96")
+        data.to_parquet(file_path, partition_cols=partition_cols, times="int96")
     else:
         raise ValueError(f"{filename} file extension is not supported")
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
@@ -202,6 +214,7 @@ def download_data(
     host: Optional[str] = None,
     retries: int = 0,
     remove_files: bool = True,
+    delete_s3_before: bool = False,
     delete_s3_after: bool = True,
     add_timestamp_dir: bool = True,
     add_s3_timestamp_dir: bool = True,
@@ -218,6 +231,7 @@ def download_data(
         database=database,
         host=host,
         retries=retries,
+        delete_s3_before=delete_s3_before,
         delete_s3_after=delete_s3_after,
         add_timestamp_dir=add_timestamp_dir,
         add_s3_timestamp_dir=add_s3_timestamp_dir,
