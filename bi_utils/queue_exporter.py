@@ -76,6 +76,7 @@ class QueueExporter:
         table: Optional[str] = None,
         delete_file_after: bool = False,
         delete_s3_after: bool = False,
+        partition_cols: Optional[Sequence] = None,
         secret_id: str = "prod/redshift/analytics",
     ) -> None:
         """
@@ -102,6 +103,7 @@ class QueueExporter:
             "table": table,
             "delete_file_after": delete_file_after,
             "delete_s3_after": delete_s3_after,
+            "partition_cols": partition_cols,
             "secret_id": secret_id,
         }
         item = QueueItem(item_type="df", kwargs=kwargs)
@@ -158,16 +160,20 @@ class QueueExporter:
         table: Optional[str] = None,
         delete_file_after: bool = False,
         delete_s3_after: bool = False,
+        partition_cols: Optional[Sequence] = None,
         secret_id: str = "prod/redshift/analytics",
     ) -> None:
+        filename = os.path.basename(file_path)
         if s3_bucket or s3_bucket_dir or not delete_file_after:
             if ".csv" in file_path.lower():
                 df.to_csv(file_path, index=False, columns=columns)
             elif ".parquet" in file_path.lower():
-                df.to_parquet(file_path, times="int96")
+                if partition_cols:
+                    logger.warning(f"Partitions are not supported for csv files: {filename}")
+                df.to_parquet(file_path, partition_cols=partition_cols, times="int96")
             else:
                 df.to_pickle(file_path)
-            logger.info(f"Saved df to {os.path.basename(file_path)} ({len(df)} rows)")
+            logger.info(f"Saved df to {filename} ({len(df)} rows)")
         if s3_bucket and s3_bucket_dir:
             self._export_file(
                 file_path,
