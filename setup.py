@@ -18,9 +18,6 @@ setuptools.setup(
     url="https://github.com/gismart/bi-utils",
     packages=setuptools.find_packages(),
     python_requires=">=3.8",
-    dependency_links=[
-        "git+https://github.com/capitalone/locopy@27743fc#egg=locopy",
-    ],
     install_requires=install_requires,
     classifiers=[
         "Programming Language :: Python :: 3",
