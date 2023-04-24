@@ -168,12 +168,14 @@ def upload_data(
     filedir = os.path.dirname(file_path)
     if filedir and not os.path.exists(filedir):
         os.mkdir(filedir)
+    if columns:
+        data = data[columns]
     if file_path.lower().endswith(".csv"):
         if partition_cols:
             logger.warning(f"Partitions are not supported for csv files: {filename}")
-        data.to_csv(file_path, index=False, columns=columns, sep=separator)
+        data.to_csv(file_path, index=False, sep=separator)
     elif file_path.lower().endswith(".parquet"):
-        data.to_parquet(file_path, partition_cols=partition_cols, times="int96")
+        data.to_parquet(file_path, partition_cols=partition_cols, times="int96", index=False)
     else:
         raise ValueError(f"{filename} file extension is not supported")
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")
