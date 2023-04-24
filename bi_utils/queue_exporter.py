@@ -164,9 +164,11 @@ class QueueExporter:
         secret_id: str = "prod/redshift/analytics",
     ) -> None:
         filename = os.path.basename(file_path)
+        if columns:
+            df = df[columns]
         if s3_bucket or s3_bucket_dir or not delete_file_after:
             if ".csv" in file_path.lower():
-                df.to_csv(file_path, index=False, columns=columns)
+                df.to_csv(file_path, index=False)
             elif ".parquet" in file_path.lower():
                 if partition_cols:
                     logger.warning(f"Partitions are not supported for csv files: {filename}")
