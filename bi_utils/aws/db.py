@@ -401,7 +401,9 @@ def _read_chunks(
                     low_memory=False,
                 )
             elif filename.lower().endswith(".parquet"):
-                chunk = pd.read_parquet(filename).astype(full_dtype)
+                chunk = pd.read_parquet(filename)
+                if not chunk.empty:
+                    chunk = chunk.astype(full_dtype)
             else:
                 raise ValueError(f"{os.path.basename(filename)} file extension is not supported")
             if chunk.empty:
