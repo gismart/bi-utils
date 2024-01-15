@@ -77,7 +77,7 @@ class QueueExporter:
         delete_file_after: bool = False,
         delete_s3_after: bool = False,
         partition_cols: Optional[Sequence] = None,
-        secret_id: str = "prod/redshift/analytics",
+        secret_id: str = aws.connection.DEFAULT_SECRET_ID,
     ) -> None:
         """
         Save dataframe to `filepath` if `s3_bucket`, `s3_bucket_dir`, `schema`, `table` not passed
@@ -121,7 +121,7 @@ class QueueExporter:
         table: Optional[str] = None,
         delete_file_after: bool = False,
         delete_s3_after: bool = False,
-        secret_id: str = "prod/redshift/analytics",
+        secret_id: str = aws.connection.DEFAULT_SECRET_ID,
     ) -> None:
         """
         Export file to S3 if `s3_bucket` and `s3_bucket_dir` passed
@@ -161,7 +161,7 @@ class QueueExporter:
         delete_file_after: bool = False,
         delete_s3_after: bool = False,
         partition_cols: Optional[Sequence] = None,
-        secret_id: str = "prod/redshift/analytics",
+        secret_id: str = aws.connection.DEFAULT_SECRET_ID,
     ) -> None:
         filename = os.path.basename(file_path)
         if columns:
@@ -211,7 +211,7 @@ class QueueExporter:
         table: Optional[str] = None,
         delete_file_after: bool = False,
         delete_s3_after: bool = False,
-        secret_id: str = "prod/redshift/analytics",
+        secret_id: str = aws.connection.DEFAULT_SECRET_ID,
     ) -> None:
         if schema and table and (".csv" in file_path.lower() or ".parquet" in file_path.lower()):
             aws.db.upload_file(
