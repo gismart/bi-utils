@@ -8,11 +8,12 @@ from typing import Dict, Optional
 from .locopy import locopy
 
 
+DEFAULT_SECRET_ID = "prod/redshift/bi_utils"
 logger = logging.getLogger(__name__)
 cached_creds: Dict[str, dict] = {}
 
 
-def get_creds(secret_id: str = "prod/redshift/analytics") -> dict:
+def get_creds(secret_id: str = DEFAULT_SECRET_ID) -> dict:
     """Get AWS credentials"""
     creds = cached_creds.get(secret_id)
     if not creds:
@@ -27,7 +28,7 @@ def get_creds(secret_id: str = "prod/redshift/analytics") -> dict:
 
 
 def get_redshift(
-    secret_id: str = "prod/redshift/analytics",
+    secret_id: str = DEFAULT_SECRET_ID,
     database: Optional[str] = None,
     host: Optional[str] = None,
 ) -> locopy.Redshift:
@@ -48,7 +49,7 @@ def get_redshift(
 
 
 def create_engine(
-    secret_id: str = "prod/redshift/analytics",
+    secret_id: str = DEFAULT_SECRET_ID,
     drivername: str = "postgresql+psycopg2",
     database: Optional[str] = None,
     host: Optional[str] = None,
@@ -72,7 +73,7 @@ def create_engine(
 
 def connect(
     schema: Optional[str] = None,
-    secret_id: str = "prod/redshift/analytics",
+    secret_id: str = DEFAULT_SECRET_ID,
     database: Optional[str] = None,
     host: Optional[str] = None,
 ) -> psycopg2.extensions.connection:
