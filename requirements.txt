@@ -1,8 +1,8 @@
 numpy<2.0.0,>=1.19.2
-pandas<2.0.0,>=1.1.0
+pandas<3.0.0,>=1.1.0
 psutil<6.0.0,>=5.7.0
 psycopg2-binary<3.0.0,>=2.9.0
 scikit-learn<2.0.0,>=0.23.1
 SQLAlchemy<2.0.0,>=1.4.46
 fastparquet==2023.2.0
-locopy==0.5.1
+locopy==0.5.7
