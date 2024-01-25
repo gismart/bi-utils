@@ -31,6 +31,7 @@ def test_upload_download_delete(file_format):
         }
     )
     data.predict_dt = pd.to_datetime(data.predict_dt)
+    data.load_dttm = pd.to_datetime(data.load_dttm)
     db.upload_data(data, f"/tmp/data.{file_format}", schema=schema, table=table)
     query = f"""
         SELECT text, predict_dt, version, load_dttm
