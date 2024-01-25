@@ -45,7 +45,6 @@ def test_upload_download_delete(file_format):
         dtype={"version": "int"},
         remove_files=False,
     ).sort_values("predict_dt", ignore_index=True)
-    breakpoint()
     assert downloaded_data.equals(data)
     db.delete(table, schema=schema, version=version)
     downloaded_data = db.download_data(query, parse_dates=["predict_dt"])
