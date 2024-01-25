@@ -172,7 +172,12 @@ class QueueExporter:
             elif ".parquet" in file_path.lower():
                 if partition_cols:
                     logger.warning(f"Partitions are not supported for csv files: {filename}")
-                df.to_parquet(file_path, partition_cols=partition_cols, times="int96", index=False)
+                df.to_parquet(
+                    file_path,
+                    partition_cols=partition_cols,
+                    coerce_timestamps="us",
+                    index=False,
+                )
             else:
                 df.to_pickle(file_path)
             logger.info(f"Saved df to {filename} ({len(df)} rows)")
