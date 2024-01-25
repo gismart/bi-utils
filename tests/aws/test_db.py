@@ -21,7 +21,7 @@ def test_delete_wo_conditions():
 def test_upload_download_delete(file_format):
     version = 1
     db.delete(table, schema=schema, version=version)
-    timestamp = pd.Timestamp.now()
+    timestamp = pd.Timestamp.now().as_unit("ns")
     data = pd.DataFrame(
         {
             "text": ["hello", "bye"],
@@ -45,6 +45,7 @@ def test_upload_download_delete(file_format):
         dtype={"version": "int"},
         remove_files=False,
     ).sort_values("predict_dt", ignore_index=True)
+    breakpoint()
     assert downloaded_data.equals(data)
     db.delete(table, schema=schema, version=version)
     downloaded_data = db.download_data(query, parse_dates=["predict_dt"])
@@ -60,7 +61,7 @@ def test_upload_update_download(file_format):
     new_version = 2
     db.delete(table, schema=schema, version=version)
     db.delete(table, schema=schema, version=new_version)
-    timestamp = pd.Timestamp.now()
+    timestamp = pd.Timestamp.now().as_unit("ns")
     data = pd.DataFrame(
         {
             "text": ["hello", "bye"],
