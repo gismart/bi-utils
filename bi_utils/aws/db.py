@@ -6,8 +6,8 @@ import logging
 import posixpath
 import pandas as pd
 import datetime as dt
-import fastparquet as fp
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
+import pyarrow.parquet as pp
 
 from .. import files, sql
 from . import connection
@@ -44,7 +44,7 @@ def upload_file(
         copy_options.append("PARQUET")
         separator = None
         if not columns:
-            columns = fp.ParquetFile(file_path).columns
+            columns = pp.ParquetFile(file_path).schema.names
     else:
         raise ValueError(f"{os.path.basename(file_path)} file extension is not supported")
     table_name = f"{schema}.{table}"
@@ -175,7 +175,12 @@ def upload_data(
             logger.warning(f"Partitions are not supported for csv files: {filename}")
         data.to_csv(file_path, index=False, sep=separator)
     elif file_path.lower().endswith(".parquet"):
-        data.to_parquet(file_path, partition_cols=partition_cols, times="int96", index=False)
+        data.to_parquet(
+            file_path,
+            partition_cols=partition_cols,
+            coerce_timestamps="us",
+            index=False,
+        )
     else:
         raise ValueError(f"{filename} file extension is not supported")
     logger.info(f"Data is saved to {filename} ({len(data)} rows)")

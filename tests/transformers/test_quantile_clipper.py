@@ -11,7 +11,7 @@ from .. import utils
 def test_quantile_clipper(cols, q, data):
     data = data.dropna()
     target_data = pd.read_csv(utils.data_path("quantile_clipper.csv"))
-    target_data = target_data[(target_data.cols == str(cols)) & (target_data.q == q)]
+    target_data = target_data[(target_data.cols.fillna("None") == str(cols)) & (target_data.q == q)]
     clipper = transformers.QuantileClipper(cols=cols, q=q)
     X = data.drop(["conversion", "conversion_predict"], axis=1)
     y = data["conversion"]

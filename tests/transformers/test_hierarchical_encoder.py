@@ -11,7 +11,7 @@ from .. import utils
 def test_hierarchical_encoder(cols, C, data):
     data = data.dropna()
     target_data = pd.read_csv(utils.data_path("hierarchical_encoder.csv"))
-    target_data = target_data[(target_data.cols == str(cols)) & (target_data.C == C)]
+    target_data = target_data[(target_data.cols.fillna("None") == str(cols)) & (target_data.C == C)]
     clipper = transformers.HierarchicalEncoder(cols=cols, C=C)
     X = data.drop(["conversion", "conversion_predict"], axis=1)
     y = data["conversion"]

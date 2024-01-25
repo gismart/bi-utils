@@ -21,7 +21,7 @@ def test_delete_wo_conditions():
 def test_upload_download_delete(file_format):
     version = 1
     db.delete(table, schema=schema, version=version)
-    timestamp = pd.Timestamp.now()
+    timestamp = pd.Timestamp.now().as_unit("ns")
     data = pd.DataFrame(
         {
             "text": ["hello", "bye"],
@@ -31,6 +31,7 @@ def test_upload_download_delete(file_format):
         }
     )
     data.predict_dt = pd.to_datetime(data.predict_dt)
+    data.load_dttm = pd.to_datetime(data.load_dttm)
     db.upload_data(data, f"/tmp/data.{file_format}", schema=schema, table=table)
     query = f"""
         SELECT text, predict_dt, version, load_dttm
@@ -59,7 +60,7 @@ def test_upload_update_download(file_format):
     new_version = 2
     db.delete(table, schema=schema, version=version)
     db.delete(table, schema=schema, version=new_version)
-    timestamp = pd.Timestamp.now()
+    timestamp = pd.Timestamp.now().as_unit("ns")
     data = pd.DataFrame(
         {
             "text": ["hello", "bye"],
