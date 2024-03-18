@@ -91,16 +91,17 @@ def download_files(
     database: Optional[str] = None,
     host: Optional[str] = None,
     retries: int = 0,
+    max_chunk_size_mb: int = 6000,
     add_timestamp_dir: bool = True,
     add_s3_timestamp_dir: bool = True,
 ) -> Sequence[str]:
     """Copy data from RedShift to S3 and download csv or parquet files up to 6.2 GB"""
-
+    max_chunk_size_opt = f"MAXFILESIZE {max_chunk_size_mb} MB"
     if file_format.lower() == "csv":
-        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON"]
+        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON", max_chunk_size_opt]
     elif file_format.lower() == "parquet":
         separator = None
-        unload_options = ["PARQUET", "PARALLEL ON"]
+        unload_options = ["PARQUET", "PARALLEL ON", max_chunk_size_opt]
     else:
         raise ValueError(f"{file_format} file format is not supported")
     if delete_s3_before:
@@ -220,6 +221,7 @@ def download_data(
     database: Optional[str] = None,
     host: Optional[str] = None,
     retries: int = 0,
+    max_chunk_size_mb: int = 6000,
     remove_files: bool = True,
     delete_s3_before: bool = False,
     delete_s3_after: bool = True,
@@ -238,6 +240,7 @@ def download_data(
         database=database,
         host=host,
         retries=retries,
+        max_chunk_size_mb=max_chunk_size_mb,
         delete_s3_before=delete_s3_before,
         delete_s3_after=delete_s3_after,
         add_timestamp_dir=add_timestamp_dir,
