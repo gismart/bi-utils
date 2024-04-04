@@ -180,6 +180,7 @@ def upload_data(
             file_path,
             partition_cols=partition_cols,
             coerce_timestamps="us",
+            allow_truncated_timestamps=True,
             index=False,
         )
     else:
