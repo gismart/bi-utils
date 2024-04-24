@@ -267,7 +267,9 @@ def unload_data(
     partition_by: list[str] | None = None,
 ) -> Sequence[str]:
     """Unload data from RedShift to S3 into csv or parquet files up to `max_chunk_size_mb`"""
-    unload_options = _get_unload_options(file_format, delete_s3_before, max_chunk_size_mb, partition_by)
+    unload_options = _get_unload_options(
+        file_format, delete_s3_before, max_chunk_size_mb, partition_by
+    )
     if not bucket_dir.endswith("/"):
         bucket_dir += "/"
     with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
