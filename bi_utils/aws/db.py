@@ -95,19 +95,10 @@ def download_files(
     add_timestamp_dir: bool = True,
     add_s3_timestamp_dir: bool = True,
 ) -> Sequence[str]:
-    """Copy data from RedShift to S3 and download csv or parquet files up to 6.2 GB"""
-    max_chunk_size_opt = f"MAXFILESIZE {max_chunk_size_mb} MB"
-    if file_format.lower() == "csv":
-        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON", max_chunk_size_opt]
-    elif file_format.lower() == "parquet":
+    """Copy data from RedShift to S3 and download csv or parquet files up to `max_chunk_size_mb`"""
+    unload_options = _get_unload_options(file_format, delete_s3_before, max_chunk_size_mb)
+    if file_format.lower() == "parquet":
         separator = None
-        unload_options = ["PARQUET", "PARALLEL ON", max_chunk_size_opt]
-    else:
-        raise ValueError(f"{file_format} file format is not supported")
-    if delete_s3_before:
-        unload_options.append("CLEANPATH")
-    else:
-        unload_options.append("ALLOWOVERWRITE")
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
     elif not bucket_dir.endswith("/"):
@@ -262,6 +253,32 @@ def download_data(
     return data
 
 
+def unload_data(
+    query: str,
+    file_format: str = "csv",
+    *,
+    bucket: str = "gismart-analytics",
+    bucket_dir: str = "dwh/temp",
+    delete_s3_before: bool = False,
+    secret_id: str = connection.DEFAULT_SECRET_ID,
+    database: Optional[str] = None,
+    host: Optional[str] = None,
+    max_chunk_size_mb: int = 6000,
+    partition_by: list[str] | None = None,
+) -> Sequence[str]:
+    """Unload data from RedShift to S3 into csv or parquet files up to `max_chunk_size_mb`"""
+    unload_options = _get_unload_options(file_format, delete_s3_before, max_chunk_size_mb, partition_by)
+    if not bucket_dir.endswith("/"):
+        bucket_dir += "/"
+    with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
+        s3_path = redshift_locopy._generate_unload_path(bucket, bucket_dir)
+        redshift_locopy.unload(
+            query=query,
+            s3path=s3_path,
+            unload_options=unload_options,
+        )
+
+
 def read_files(
     file_path: Union[str, Sequence[str]],
     *,
@@ -380,6 +397,28 @@ def _add_timestamp_dir(dir_path: str, postfix: str = "", posix: bool = False) ->
     else:
         dir_path = os.path.join(dir_path, timestamp)
     return dir_path
+
+
+def _get_unload_options(
+    file_format: str = "csv",
+    delete_s3_before: bool = False,
+    max_chunk_size_mb: int = 6000,
+    partition_by: list[str] | None = None,
+) -> list[str]:
+    max_chunk_size_opt = f"MAXFILESIZE {max_chunk_size_mb} MB"
+    if file_format.lower() == "csv":
+        unload_options = ["CSV", "HEADER", "GZIP", "PARALLEL ON", max_chunk_size_opt]
+    elif file_format.lower() == "parquet":
+        unload_options = ["PARQUET", "PARALLEL ON", max_chunk_size_opt]
+    else:
+        raise ValueError(f"{file_format} file format is not supported")
+    if delete_s3_before:
+        unload_options.append("CLEANPATH")
+    else:
+        unload_options.append("ALLOWOVERWRITE")
+    if partition_by:
+        unload_options.append(f"PARTITION BY ({', '.join(partition_by)}) INCLUDE")
+    return unload_options
 
 
 def _read_chunks(
