@@ -19,6 +19,7 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
         self.lq = q
         self.cols = cols
         self.q = q
+        self.interpolation = "linear"
 
     def _check_params(self, X: pd.DataFrame) -> None:
         if not 0 < self.lq <= 0.5:
@@ -39,9 +40,9 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
         self._check_params(X)
 
         X["target"] = y
-        groups = X.groupby(self.cols)
-        self.groups_l_ = groups["target"].quantile(self.lq).fillna(y.min()).rename("target_l")
-        self.groups_u_ = groups["target"].quantile(self.uq).fillna(y.max()).rename("target_u")
+        groups = X.groupby(self.cols, observed=True)
+        self.groups_l_ = groups["target"].quantile(self.lq, numeric_only=True, interpolation=self.interpolation).fillna(y.min()).rename("target_l")
+        self.groups_u_ = groups["target"].quantile(self.uq, numeric_only=True, interpolation=self.interpolation).fillna(y.max()).rename("target_u")
         self.n_groups_ = len(groups)
         return self
 
