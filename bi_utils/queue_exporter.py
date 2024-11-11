@@ -169,9 +169,9 @@ class QueueExporter:
         if s3_bucket or s3_bucket_dir or not delete_file_after:
             if ".csv" in file_path.lower():
                 df.to_csv(file_path, index=False)
-            elif ".parquet" in file_path.lower():
                 if partition_cols:
                     logger.warning(f"Partitions are not supported for csv files: {filename}")
+            elif ".parquet" in file_path.lower() or partition_cols:
                 df.to_parquet(
                     file_path,
                     partition_cols=partition_cols,
