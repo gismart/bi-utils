@@ -5,4 +5,4 @@ psycopg2-binary<3.0.0,>=2.9.0
 scikit-learn<2.0.0,>=0.23.1
 SQLAlchemy<2.0.0,>=1.4.46
 pyarrow>=15.0.0
-locopy==0.6.2
+locopy==0.5.9
