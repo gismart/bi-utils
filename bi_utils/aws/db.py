@@ -264,7 +264,7 @@ def unload_data(
     database: Optional[str] = None,
     host: Optional[str] = None,
     max_chunk_size_mb: int = 6000,
-    partition_by: list[str] | None = None,
+    partition_by: Optional[list[str]] = None,
 ) -> Sequence[str]:
     """Unload data from RedShift to S3 into csv or parquet files up to `max_chunk_size_mb`"""
     unload_options = _get_unload_options(
@@ -405,7 +405,7 @@ def _get_unload_options(
     file_format: str = "csv",
     delete_s3_before: bool = False,
     max_chunk_size_mb: int = 6000,
-    partition_by: list[str] | None = None,
+    partition_by: Optional[list[str]] = None,
 ) -> list[str]:
     max_chunk_size_opt = f"MAXFILESIZE {max_chunk_size_mb} MB"
     if file_format.lower() == "csv":

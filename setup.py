@@ -9,7 +9,7 @@ with open("requirements.txt") as file:
 
 setuptools.setup(
     name="bi-utils-gismart",
-    version="0.17.0",
+    version="0.17.1",
     author="gismart",
     author_email="info@gismart.com",
     description="Utils for BI team",
@@ -17,7 +17,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/gismart/bi-utils",
     packages=setuptools.find_packages(),
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=install_requires,
     classifiers=[
         "Programming Language :: Python :: 3",

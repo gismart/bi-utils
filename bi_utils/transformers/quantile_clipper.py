@@ -14,11 +14,21 @@ logger = logging.getLogger(__name__)
 class QuantileClipper(BaseEstimator, TransformerMixin):
     """Clip grouped features by certain quantile"""
 
-    def __init__(self, *, cols: Optional[Sequence[str]] = None, q: float = 0.001) -> None:
+    def __init__(
+        self,
+        *,
+        cols: Optional[Sequence[str]] = None,
+        q: float = 0.001,
+        interpolation: str = "linear",
+    ) -> None:
         self.uq = 1 - q
         self.lq = q
         self.cols = cols
         self.q = q
+        self.quantile_params = {
+            "interpolation": interpolation,
+            "numeric_only": True,
+        }
 
     def _check_params(self, X: pd.DataFrame) -> None:
         if not 0 < self.lq <= 0.5:
@@ -39,9 +49,11 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
         self._check_params(X)
 
         X["target"] = y
-        groups = X.groupby(self.cols)
-        self.groups_l_ = groups["target"].quantile(self.lq).fillna(y.min()).rename("target_l")
-        self.groups_u_ = groups["target"].quantile(self.uq).fillna(y.max()).rename("target_u")
+        groups = X.groupby(self.cols, observed=True)
+        self.groups_u_ = groups["target"].quantile(self.uq, **self.quantile_params)
+        self.groups_u_ = self.groups_u_.fillna(y.max()).rename("target_u")
+        self.groups_l_ = groups["target"].quantile(self.lq, **self.quantile_params)
+        self.groups_l_ = self.groups_l_.fillna(y.min()).rename("target_l")
         self.n_groups_ = len(groups)
         return self
 
