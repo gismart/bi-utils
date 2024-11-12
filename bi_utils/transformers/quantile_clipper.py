@@ -15,12 +15,12 @@ class QuantileClipper(BaseEstimator, TransformerMixin):
     """Clip grouped features by certain quantile"""
 
     def __init__(
-            self,
-            *,
-            cols: Optional[Sequence[str]] = None,
-            q: float = 0.001,
-            interpolation: str = "linear",
-            ) -> None:
+        self,
+        *,
+        cols: Optional[Sequence[str]] = None,
+        q: float = 0.001,
+        interpolation: str = "linear",
+    ) -> None:
         self.uq = 1 - q
         self.lq = q
         self.cols = cols
