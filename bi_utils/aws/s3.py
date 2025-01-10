@@ -2,6 +2,7 @@ import os
 import boto3
 import logging
 from botocore.exceptions import ClientError
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)
@@ -51,13 +52,18 @@ def download_dir(
     dir_path: str,
     *,
     bucket: str = "gismart-analytics",
+    files_prefix: Optional[str] = None,
 ) -> bool:
     """Download directory contents from S3 without subfolders"""
     resource = boto3.resource("s3")
     bucket_resource = resource.Bucket(bucket)
+    if not bucket_dir_path.endswith("/"):
+        bucket_dir_path += "/"
     try:
         for obj in bucket_resource.objects.filter(Prefix=bucket_dir_path):
             filename = os.path.basename(obj.key)
+            if files_prefix:
+                filename = f"{files_prefix}{filename}"
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
             file_path = os.path.join(dir_path, filename)
