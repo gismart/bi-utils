@@ -55,6 +55,8 @@ def download_dir(
     """Download directory contents from S3 without subfolders"""
     resource = boto3.resource("s3")
     bucket_resource = resource.Bucket(bucket)
+    if not bucket_dir_path.endswith("/"):
+        bucket_dir_path += "/"
     try:
         for obj in bucket_resource.objects.filter(Prefix=bucket_dir_path):
             filename = os.path.basename(obj.key)
