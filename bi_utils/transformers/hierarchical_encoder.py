@@ -29,8 +29,8 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         self.verbose = verbose
 
     def _check_params(self, X: pd.DataFrame) -> None:
-        if self.C <= 0:
-            raise ValueError(f"C={self.C} must be > 0")
+        if self.C < 0:
+            raise ValueError(f"C={self.C} must be >= 0")
 
     def _disambiguate(self, X: pd.DataFrame, sep: str = "__") -> pd.DataFrame:
         """
@@ -86,10 +86,11 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         X["target_numerator"] = y * sample_weight
 
         self.total_ratio_ = np.average(y, weights=sample_weight)
-        min_sample_std = np.sqrt(self.total_ratio_ * (1 - self.total_ratio_) / self.C)
-        self.std_mean_ratio_ = round(min_sample_std / self.total_ratio_, 3)
-        if self.verbose:
-            logger.info(f"STD/AVG for min sample: {self.std_mean_ratio_}")
+        if self.C > 0:
+            min_sample_std = np.sqrt(self.total_ratio_ * (1 - self.total_ratio_) / self.C)
+            self.std_mean_ratio_ = round(min_sample_std / self.total_ratio_, 3)
+            if self.verbose:
+                logger.info(f"STD/AVG for min sample: {self.std_mean_ratio_}")
 
         self.lvl_groups_ = {}
         for lvl, _ in enumerate(self.cols):
