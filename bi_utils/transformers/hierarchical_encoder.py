@@ -86,7 +86,7 @@ class HierarchicalEncoder(BaseEstimator, TransformerMixin):
         X["target_numerator"] = y * sample_weight
 
         self.total_ratio_ = np.average(y, weights=sample_weight)
-        if self.C > 0 : 
+        if self.C > 0: 
             min_sample_std = np.sqrt(self.total_ratio_ * (1 - self.total_ratio_) / self.C)
             self.std_mean_ratio_ = round(min_sample_std / self.total_ratio_, 3)
             if self.verbose:
