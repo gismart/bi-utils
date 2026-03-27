@@ -173,6 +173,7 @@ def upload_data(
             coerce_timestamps="us",
             allow_truncated_timestamps=True,
             index=False,
+            row_group_size=10000,
         )
     else:
         raise ValueError(f"{filename} file extension is not supported")

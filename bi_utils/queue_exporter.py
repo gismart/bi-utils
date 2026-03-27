@@ -178,6 +178,7 @@ class QueueExporter:
                     coerce_timestamps="us",
                     allow_truncated_timestamps=True,
                     index=False,
+                    row_group_size=10000,
                 )
             else:
                 df.to_pickle(file_path)
