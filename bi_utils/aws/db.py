@@ -1,5 +1,4 @@
 import os
-import glob
 import shutil
 import logging
 import posixpath
@@ -88,25 +87,13 @@ def upload_file(
             return
 
 
-
-def download_files(
-    query: str,
-    data_dir: Optional[str] = None,
-    file_format: str = "csv",
+def _prepare_download_dirs(
+    bucket_dir: str,
+    data_dir: Optional[str],
     *,
-    separator: str = ",",
-    bucket: str = "gismart-analytics",
-    bucket_dir: str = "dwh/temp",
-    delete_s3_before: bool = False,
-    delete_s3_after: bool = True,
-    secret_id: str = connection.DEFAULT_SECRET_ID,
-    database: Optional[str] = None,
-    host: Optional[str] = None,
-    retries: int = 0,
-    max_chunk_size_mb: int = 6000,
-    add_timestamp_dir: bool = True,
-    add_s3_timestamp_dir: bool = True,
-) -> Sequence[str]:
+    add_s3_timestamp_dir: bool,
+    add_timestamp_dir: bool,
+) -> tuple[str, Optional[str]]:
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
     elif not bucket_dir.endswith("/"):
@@ -115,9 +102,18 @@ def download_files(
         data_dir = _add_timestamp_dir(data_dir or os.getcwd())
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
+    return bucket_dir, data_dir
 
-    s3_prefix = f"{bucket_dir}export_"
-    unload_query = query.replace("'", "''").strip().rstrip(";")
+
+def _unload_sql_for_query(
+    unload_query: str,
+    bucket: str,
+    s3_prefix: str,
+    file_format: str,
+    separator: str,
+    max_chunk_size_mb: int,
+    delete_s3_before: bool,
+) -> str:
     if file_format.lower() == "csv":
         unload_options = [
             "CSV",
@@ -137,14 +133,21 @@ def download_files(
         raise ValueError(f"{file_format} file format is not supported")
     unload_options.append("CLEANPATH" if delete_s3_before else "ALLOWOVERWRITE")
     unload_opts_sql = "\n    ".join(unload_options)
-
-    unload_sql = f"""
+    return f"""
     UNLOAD ('{unload_query}')
     TO 's3://{bucket}/{s3_prefix}'
     IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
     {unload_opts_sql};
     """
 
+
+def _execute_unload_with_retries(
+    unload_sql: str,
+    secret_id: str,
+    database: Optional[str],
+    host: Optional[str],
+    retries: int,
+) -> None:
     with connection.get_redshift(secret_id, database=database, host=host) as conn:
         with conn.cursor() as cur:
             for attempt_number in range(retries + 1):
@@ -158,9 +161,9 @@ def download_files(
                 else:
                     break
 
-    # --- 2. Ждём пока файлы появятся в S3 ---
-    s3 = connection.boto3.client("s3")
-    response = {}
+
+def _wait_s3_until_export_files(s3: Any, bucket: str, s3_prefix: str) -> dict[str, Any]:
+    response: dict[str, Any] = {}
     for _ in range(30):
         response = s3.list_objects_v2(Bucket=bucket, Prefix=s3_prefix)
         if response.get("Contents"):
@@ -168,24 +171,77 @@ def download_files(
         time.sleep(2)
     else:
         raise RuntimeError("UNLOAD produced no files")
+    return response
 
-    # --- 3. Скачиваем файлы ---
-    filenames = []
 
+def _download_s3_export_files(
+    s3: Any,
+    bucket: str,
+    response: dict[str, Any],
+    data_dir: Optional[str],
+) -> list[str]:
+    filenames: list[str] = []
     for obj in response.get("Contents", []):
         key = obj["Key"]
         if key.endswith("/") or key.endswith("manifest"):
             continue
-
         local_path = os.path.join(data_dir, os.path.basename(key))
         s3.download_file(bucket, key, local_path)
         filenames.append(local_path)
+    return filenames
 
+
+def _delete_s3_list_response_objects(
+    s3: Any,
+    bucket: str,
+    response: dict[str, Any],
+) -> None:
+    delete_payload = [{"Key": obj["Key"]} for obj in response.get("Contents", [])]
+    if delete_payload:
+        s3.delete_objects(Bucket=bucket, Delete={"Objects": delete_payload})
+
+
+def download_files(
+    query: str,
+    data_dir: Optional[str] = None,
+    file_format: str = "csv",
+    *,
+    separator: str = ",",
+    bucket: str = "gismart-analytics",
+    bucket_dir: str = "dwh/temp",
+    delete_s3_before: bool = False,
+    delete_s3_after: bool = True,
+    secret_id: str = connection.DEFAULT_SECRET_ID,
+    database: Optional[str] = None,
+    host: Optional[str] = None,
+    retries: int = 0,
+    max_chunk_size_mb: int = 6000,
+    add_timestamp_dir: bool = True,
+    add_s3_timestamp_dir: bool = True,
+) -> Sequence[str]:
+    bucket_dir, data_dir = _prepare_download_dirs(
+        bucket_dir,
+        data_dir,
+        add_s3_timestamp_dir=add_s3_timestamp_dir,
+        add_timestamp_dir=add_timestamp_dir,
+    )
+    s3_prefix = f"{bucket_dir}export_"
+    unload_query = query.replace("'", "''").strip().rstrip(";")
+    unload_sql = _unload_sql_for_query(
+        unload_query,
+        bucket,
+        s3_prefix,
+        file_format,
+        separator,
+        max_chunk_size_mb,
+        delete_s3_before,
+    )
+    _execute_unload_with_retries(unload_sql, secret_id, database, host, retries)
+    s3 = connection.boto3.client("s3")
+    response = _wait_s3_until_export_files(s3, bucket, s3_prefix)
+    filenames = _download_s3_export_files(s3, bucket, response, data_dir)
     if delete_s3_after:
-        delete_payload = [{"Key": obj["Key"]} for obj in response.get("Contents", [])]
-        if delete_payload:
-            s3.delete_objects(Bucket=bucket, Delete={"Objects": delete_payload})
-
+        _delete_s3_list_response_objects(s3, bucket, response)
     return filenames
 
 
@@ -248,6 +304,7 @@ def upload_data(
     if remove_file:
         os.remove(file_path)
         logger.info(f"{filename} is removed")
+
 
 def download_data(
     query: str,
