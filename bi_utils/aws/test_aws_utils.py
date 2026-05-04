@@ -1,6 +1,6 @@
-import pytest
 from bi_utils.aws import db
-import pandas as pd 
+import pandas as pd
+
 
 def test_download_data():
     query = '''
@@ -8,9 +8,9 @@ def test_download_data():
     '''
     file_format = "csv"
 
-    downloaded_data  = db.download_data(
-    query=query,
-    file_format=file_format
+    downloaded_data = db.download_data(
+        query=query,
+        file_format=file_format,
     )
 
-    assert isinstance(downloaded_data, pd.DataFrame) and len(downloaded_data)!=0
+    assert isinstance(downloaded_data, pd.DataFrame) and len(downloaded_data) != 0
