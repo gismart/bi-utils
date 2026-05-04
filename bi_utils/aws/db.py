@@ -1,9 +1,9 @@
 import os
 import glob
 import shutil
-import locopy
 import logging
 import posixpath
+import time
 import pandas as pd
 import datetime as dt
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
@@ -14,6 +14,7 @@ from . import connection
 
 
 logger = logging.getLogger(__name__)
+REDSHIFT_S3_IAM_ROLE = "arn:aws:iam::504901167729:role/GismartAnalyticsRedshiftS3Access"
 
 
 def upload_file(
@@ -32,21 +33,21 @@ def upload_file(
     retries: int = 0,
     add_s3_timestamp_dir: bool = True,
 ) -> None:
-    """Upload csv or parquet file to S3 and copy to Redshift"""
-
-    copy_options = []
+    """Upload csv or parquet file to S3 and copy to Redshift via boto3 + psycopg2"""
+    copy_options: list[str] = []
     if file_path.lower().endswith(".csv"):
         copy_options.append("CSV")
         copy_options.append("IGNOREHEADER 1")
+        copy_options.append(f"DELIMITER '{separator}'")
         if not columns:
             columns = files.csv_columns(file_path, separator=separator)
     elif file_path.lower().endswith(".parquet"):
-        copy_options.append("PARQUET")
-        separator = None
+        copy_options.append("FORMAT AS PARQUET")
         if not columns:
             columns = pp.ParquetFile(file_path).schema.names
     else:
         raise ValueError(f"{os.path.basename(file_path)} file extension is not supported")
+
     table_name = f"{schema}.{table}"
     if columns:
         table_name += f" ({','.join(columns)})"
@@ -54,27 +55,38 @@ def upload_file(
         bucket_dir = _add_timestamp_dir(bucket_dir, posix=True)
     elif not bucket_dir.endswith("/"):
         bucket_dir += "/"
-    with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
-        for attempt_number in range(retries + 1):
-            try:
-                redshift_locopy.load_and_copy(
-                    local_file=file_path,
-                    s3_bucket=bucket,
-                    s3_folder=bucket_dir,
-                    table_name=table_name,
-                    delim=separator,
-                    copy_options=copy_options,
-                    delete_s3_after=delete_s3_after,
-                    compress=False,
-                )
-            except locopy.errors.S3UploadError as error:
-                if attempt_number == retries:
-                    raise error
-                else:
-                    logger.warning(f"Failed upload attempt #{attempt_number + 1}")
-            else:
-                logger.info(f"{os.path.basename(file_path)} is uploaded to {schema}.{table}")
-                return
+    if not bucket_dir.endswith("/"):
+        bucket_dir += "/"
+    s3_key = f"{bucket_dir}{os.path.basename(file_path)}"
+
+    s3 = connection.boto3.client("s3")
+    copy_options_sql = "\n    ".join(copy_options)
+    copy_sql = f"""
+    COPY {table_name}
+    FROM 's3://{bucket}/{s3_key}'
+    IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
+    {copy_options_sql};
+    """
+
+    for attempt_number in range(retries + 1):
+        try:
+            s3.upload_file(file_path, bucket, s3_key)
+            with connection.get_redshift(
+                secret_id=secret_id, database=database, host=host
+            ) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(copy_sql)
+                    conn.commit()
+        except Exception as error:
+            if attempt_number == retries:
+                raise error
+            logger.warning(f"Failed upload attempt #{attempt_number + 1}")
+        else:
+            if delete_s3_after:
+                s3.delete_object(Bucket=bucket, Key=s3_key)
+            logger.info(f"{os.path.basename(file_path)} is uploaded to {schema}.{table}")
+            return
+
 
 
 def download_files(
@@ -95,10 +107,6 @@ def download_files(
     add_timestamp_dir: bool = True,
     add_s3_timestamp_dir: bool = True,
 ) -> Sequence[str]:
-    """Copy data from RedShift to S3 and download csv or parquet files up to `max_chunk_size_mb`"""
-    unload_options = _get_unload_options(file_format, delete_s3_before, max_chunk_size_mb)
-    if file_format.lower() == "parquet":
-        separator = None
     if add_s3_timestamp_dir:
         bucket_dir = _add_timestamp_dir(bucket_dir, postfix="/", posix=True)
     elif not bucket_dir.endswith("/"):
@@ -107,33 +115,78 @@ def download_files(
         data_dir = _add_timestamp_dir(data_dir or os.getcwd())
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir)
-    with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
-        for attempt_number in range(retries + 1):
-            try:
-                redshift_locopy.unload_and_copy(
-                    query=query,
-                    s3_bucket=bucket,
-                    s3_folder=bucket_dir,
-                    export_path=False,
-                    raw_unload_path=data_dir,
-                    delim=separator,
-                    delete_s3_after=delete_s3_after,
-                    parallel_off=False,
-                    unload_options=unload_options,
-                )
-            except locopy.errors.S3DownloadError as error:
-                if attempt_number == retries:
-                    raise error
+
+    s3_prefix = f"{bucket_dir}export_"
+    unload_query = query.replace("'", "''").strip().rstrip(";")
+    if file_format.lower() == "csv":
+        unload_options = [
+            "CSV",
+            "HEADER",
+            "GZIP",
+            f"DELIMITER '{separator}'",
+            "PARALLEL ON",
+            f"MAXFILESIZE {max_chunk_size_mb} MB",
+        ]
+    elif file_format.lower() == "parquet":
+        unload_options = [
+            "PARQUET",
+            "PARALLEL ON",
+            f"MAXFILESIZE {max_chunk_size_mb} MB",
+        ]
+    else:
+        raise ValueError(f"{file_format} file format is not supported")
+    unload_options.append("CLEANPATH" if delete_s3_before else "ALLOWOVERWRITE")
+    unload_opts_sql = "\n    ".join(unload_options)
+
+    unload_sql = f"""
+    UNLOAD ('{unload_query}')
+    TO 's3://{bucket}/{s3_prefix}'
+    IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
+    {unload_opts_sql};
+    """
+
+    with connection.get_redshift(secret_id, database=database, host=host) as conn:
+        with conn.cursor() as cur:
+            for attempt_number in range(retries + 1):
+                try:
+                    cur.execute(unload_sql)
+                    conn.commit()
+                except Exception as error:
+                    if attempt_number == retries:
+                        raise error
+                    logger.warning(f"Failed unload attempt #{attempt_number + 1}")
                 else:
-                    logger.warning(f"Failed download attempt #{attempt_number + 1}")
-            except Exception as error:
-                if "no files" in str(error).lower():
-                    return []
-                raise error
-            else:
-                logger.info(f"Data is downloaded to {file_format} files")
-                filenames = glob.glob(os.path.join(data_dir, "*_part_*"))
-                return filenames
+                    break
+
+    # --- 2. Ждём пока файлы появятся в S3 ---
+    s3 = connection.boto3.client("s3")
+    response = {}
+    for _ in range(30):
+        response = s3.list_objects_v2(Bucket=bucket, Prefix=s3_prefix)
+        if response.get("Contents"):
+            break
+        time.sleep(2)
+    else:
+        raise RuntimeError("UNLOAD produced no files")
+
+    # --- 3. Скачиваем файлы ---
+    filenames = []
+
+    for obj in response.get("Contents", []):
+        key = obj["Key"]
+        if key.endswith("/") or key.endswith("manifest"):
+            continue
+
+        local_path = os.path.join(data_dir, os.path.basename(key))
+        s3.download_file(bucket, key, local_path)
+        filenames.append(local_path)
+
+    if delete_s3_after:
+        delete_payload = [{"Key": obj["Key"]} for obj in response.get("Contents", [])]
+        if delete_payload:
+            s3.delete_objects(Bucket=bucket, Delete={"Objects": delete_payload})
+
+    return filenames
 
 
 def upload_data(
@@ -196,7 +249,6 @@ def upload_data(
         os.remove(file_path)
         logger.info(f"{filename} is removed")
 
-
 def download_data(
     query: str,
     file_format: str = "csv",
@@ -228,13 +280,13 @@ def download_data(
         separator=separator,
         bucket=bucket,
         bucket_dir=bucket_dir,
+        delete_s3_before=delete_s3_before,
+        delete_s3_after=delete_s3_after,
         secret_id=secret_id,
         database=database,
         host=host,
         retries=retries,
         max_chunk_size_mb=max_chunk_size_mb,
-        delete_s3_before=delete_s3_before,
-        delete_s3_after=delete_s3_after,
         add_timestamp_dir=add_timestamp_dir,
         add_s3_timestamp_dir=add_s3_timestamp_dir,
     )
@@ -266,19 +318,38 @@ def unload_data(
     max_chunk_size_mb: int = 6000,
     partition_by: Optional[list[str]] = None,
 ) -> Sequence[str]:
-    """Unload data from RedShift to S3 into csv or parquet files up to `max_chunk_size_mb`"""
     unload_options = _get_unload_options(
         file_format, delete_s3_before, max_chunk_size_mb, partition_by
     )
     if not bucket_dir.endswith("/"):
         bucket_dir += "/"
-    with connection.get_redshift(secret_id, database=database, host=host) as redshift_locopy:
-        s3_path = redshift_locopy._generate_unload_path(bucket, bucket_dir)
-        redshift_locopy.unload(
-            query=query,
-            s3path=s3_path,
-            unload_options=unload_options,
-        )
+    s3_prefix = f"{bucket_dir}export_"
+    unload_query = query.replace("'", "''").strip().rstrip(";")
+    unload_opts_sql = "\n    ".join(unload_options)
+    unload_sql = f"""
+    UNLOAD ('{unload_query}')
+    TO 's3://{bucket}/{s3_prefix}'
+    IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
+    {unload_opts_sql};
+    """
+
+    with connection.get_redshift(secret_id, database=database, host=host) as conn:
+        with conn.cursor() as cur:
+            cur.execute(unload_sql)
+            conn.commit()
+
+    s3 = connection.boto3.client("s3")
+    uris: list[str] = []
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=s3_prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            if key.endswith("/") or key.endswith("manifest"):
+                continue
+            uris.append(f"s3://{bucket}/{key}")
+
+    logger.info(f"UNLOAD completed under s3://{bucket}/{s3_prefix} ({len(uris)} objects)")
+    return uris
 
 
 def read_files(

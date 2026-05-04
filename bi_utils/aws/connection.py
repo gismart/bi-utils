@@ -5,8 +5,6 @@ import psycopg2
 import sqlalchemy as sa
 from typing import Dict, Optional
 
-from .locopy import locopy
-
 
 DEFAULT_SECRET_ID = "prod/redshift/bi_utils"
 logger = logging.getLogger(__name__)
@@ -28,24 +26,21 @@ def get_creds(secret_id: str = DEFAULT_SECRET_ID) -> dict:
 
 
 def get_redshift(
-    secret_id: str = DEFAULT_SECRET_ID,
+    secret_id: str,
     database: Optional[str] = None,
     host: Optional[str] = None,
-) -> locopy.Redshift:
-    """Get locopy redshift connection"""
+):
     creds = get_creds(secret_id)
-    dbname = database or creds.get("dbname")
-    host = host or creds.get("host")
-    redshift = locopy.Redshift(
-        dbapi=psycopg2,
-        host=host,
+
+    conn = psycopg2.connect(
+        host=host or creds.get("host"),
         port=creds.get("port"),
-        dbname=dbname,
+        dbname=database or creds.get("dbname"),
         user=creds.get("username"),
         password=creds.get("password"),
     )
-    logger.info(f"Created {dbname} RedShift connection")
-    return redshift
+
+    return conn
 
 
 def create_engine(
