@@ -330,7 +330,6 @@ def download_data(
     add_s3_timestamp_dir: bool = True,
 ) -> Union[pd.DataFrame, Iterator[pd.DataFrame]]:
     """Download data from Redshift via S3"""
-    print("Вызываем download_data")
     filenames = download_files(
         query=query,
         data_dir=temp_dir,
