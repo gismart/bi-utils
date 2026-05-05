@@ -25,6 +25,7 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest==8.0.2
+        pip install pytest-cov==7.1.0
     - name: AWS DB test
       run: |
         pytest bi-utils/tests/aws/test_db.py
