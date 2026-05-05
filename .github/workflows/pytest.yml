@@ -26,7 +26,6 @@ jobs:
         pip install -r requirements.txt
         pip install pytest==8.0.2
         pip install pytest-cov==7.1.0
-    - name: AWS DB test
+    - name: AWS S3 test
       run: |
-        export AWS_DEFAULT_REGION="eu-west-1"
-        pytest tests/aws/test_db.py
+        pytest tests/aws/test_s3.py
