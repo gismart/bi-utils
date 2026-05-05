@@ -28,4 +28,5 @@ jobs:
         pip install pytest-cov==7.1.0
     - name: AWS DB test
       run: |
+        export AWS_DEFAULT_REGION="eu-west-1"
         pytest tests/aws/test_db.py
