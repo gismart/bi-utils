@@ -7,6 +7,7 @@ import pandas as pd
 import datetime as dt
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
 import pyarrow.parquet as pp
+from psycopg2.extensions import adapt
 
 from .. import files, sql
 from . import connection
@@ -14,6 +15,15 @@ from . import connection
 
 logger = logging.getLogger(__name__)
 REDSHIFT_S3_IAM_ROLE = "arn:aws:iam::504901167729:role/GismartAnalyticsRedshiftS3Access"
+
+
+def _select_for_unload_string_literal(query: str) -> str:
+    """Prepare SELECT text for embedding in Redshift UNLOAD ('...') (SQL string literal rules)."""
+    q = query.strip().rstrip(";")
+    quoted = adapt(q).getquoted().decode("utf-8")
+    if len(quoted) < 2 or quoted[0] != "'" or quoted[-1] != "'":
+        raise ValueError("unexpected psycopg2 quoting for UNLOAD subquery")
+    return quoted[1:-1]
 
 
 def upload_file(
@@ -162,9 +172,9 @@ def _execute_unload_with_retries(
                     break
 
 
-def _wait_s3_until_export_files(s3: Any, bucket: str, s3_prefix: str) -> dict[str, Any]:
+def _wait_s3_until_export_files(s3: Any, bucket: str, s3_prefix: str, retry_count: int = 30) -> dict[str, Any]:
     response: dict[str, Any] = {}
-    for _ in range(30):
+    for _ in range(retry_count):
         response = s3.list_objects_v2(Bucket=bucket, Prefix=s3_prefix)
         if response.get("Contents"):
             break
@@ -225,8 +235,8 @@ def download_files(
         add_s3_timestamp_dir=add_s3_timestamp_dir,
         add_timestamp_dir=add_timestamp_dir,
     )
-    s3_prefix = f"{bucket_dir}export_"
-    unload_query = query.replace("'", "''").strip().rstrip(";")
+    s3_prefix = bucket_dir
+    unload_query = _select_for_unload_string_literal(query)
     unload_sql = _unload_sql_for_query(
         unload_query,
         bucket,
@@ -381,7 +391,7 @@ def unload_data(
     if not bucket_dir.endswith("/"):
         bucket_dir += "/"
     s3_prefix = f"{bucket_dir}export_"
-    unload_query = query.replace("'", "''").strip().rstrip(";")
+    unload_query = _select_for_unload_string_literal(query)
     unload_opts_sql = "\n    ".join(unload_options)
     unload_sql = f"""
     UNLOAD ('{unload_query}')
