@@ -26,7 +26,7 @@ def get_creds(secret_id: str = DEFAULT_SECRET_ID) -> dict:
 
 
 def get_redshift(
-    secret_id: str,
+    secret_id: str = DEFAULT_SECRET_ID,
     database: Optional[str] = None,
     host: Optional[str] = None,
 ):

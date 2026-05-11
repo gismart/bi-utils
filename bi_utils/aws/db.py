@@ -184,8 +184,6 @@ def _wait_s3_until_export_files(
         if response.get("Contents"):
             break
         time.sleep(2)
-    else:
-        raise RuntimeError("UNLOAD produced no files")
     return response
 
 
