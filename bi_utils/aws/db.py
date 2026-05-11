@@ -8,13 +8,28 @@ import datetime as dt
 from typing import Any, Iterable, Iterator, Sequence, Optional, Union
 import pyarrow.parquet as pp
 from psycopg2.extensions import adapt
+import boto3
 
 from .. import files, sql
 from . import connection
 
 
 logger = logging.getLogger(__name__)
-REDSHIFT_S3_IAM_ROLE = "arn:aws:iam::504901167729:role/GismartAnalyticsRedshiftS3Access"
+
+
+
+
+#REDSHIFT_S3_IAM_ROLE = "arn:aws:iam::504901167729:role/GismartAnalyticsRedshiftS3Access"
+
+def _get_s3_iam_role(role_name: str):
+    "Get ARN from Role Name"
+    role_name = "GismartAnalyticsRedshiftS3Access"
+    iam = boto3.client("iam")
+    response = iam.get_role(RoleName=role_name)
+    return response["Role"]["Arn"]
+
+REDSHIFT_S3_IAM_ROLE = _get_s3_iam_role("GismartAnalyticsRedshiftS3Access")
+
 
 
 def _select_for_unload_string_literal(query: str) -> str:
