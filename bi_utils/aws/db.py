@@ -172,7 +172,12 @@ def _execute_unload_with_retries(
                     break
 
 
-def _wait_s3_until_export_files(s3: Any, bucket: str, s3_prefix: str, retry_count: int = 30) -> dict[str, Any]:
+def _wait_s3_until_export_files(
+    s3: Any,
+    bucket: str,
+    s3_prefix: str,
+    retry_count: int = 30,
+) -> dict[str, Any]:
     response: dict[str, Any] = {}
     for _ in range(retry_count):
         response = s3.list_objects_v2(Bucket=bucket, Prefix=s3_prefix)
