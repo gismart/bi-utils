@@ -5,6 +5,9 @@ import pandas as pd
 from bi_utils import queue_exporter
 
 
+REDSHIFT_S3_IAM_ROLE_NAME = "GismartAnalyticsRedshiftS3Access"
+
+
 def test_queue_exporter_alive():
     with queue_exporter.QueueExporter() as exporter:
         assert exporter.alive
@@ -15,7 +18,7 @@ def test_queue_exporter_close(data):
     with pytest.raises(ValueError, match=".*closed.*"):
         exporter = queue_exporter.QueueExporter()
         exporter.close()
-        exporter.export_df(data, "data.csv")
+        exporter.export_df(data, "data.csv", role_name=REDSHIFT_S3_IAM_ROLE_NAME)
 
 
 def test_queue_exporter_export_df(data):
@@ -23,7 +26,7 @@ def test_queue_exporter_export_df(data):
     if os.path.exists(temp_data_path):
         os.remove(temp_data_path)
     with queue_exporter.QueueExporter() as exporter:
-        exporter.export_df(data, temp_data_path)
+        exporter.export_df(data, temp_data_path, role_name=REDSHIFT_S3_IAM_ROLE_NAME)
     exporter.join()
     exported_data = pd.read_pickle(temp_data_path)
     assert exported_data.equals(data)
@@ -45,6 +48,7 @@ def test_queue_exporter_bad_args(data, table, schema, s3_bucket, s3_bucket_dir):
             exporter.export_df(
                 data,
                 "data.csv",
+                role_name=REDSHIFT_S3_IAM_ROLE_NAME,
                 table=table,
                 schema=schema,
                 s3_bucket=s3_bucket,

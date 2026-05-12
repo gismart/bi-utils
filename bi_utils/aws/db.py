@@ -17,19 +17,11 @@ from . import connection
 logger = logging.getLogger(__name__)
 
 
-
-
-#REDSHIFT_S3_IAM_ROLE = "arn:aws:iam::504901167729:role/GismartAnalyticsRedshiftS3Access"
-
 def _get_s3_iam_role(role_name: str):
     "Get ARN from Role Name"
-    role_name = "GismartAnalyticsRedshiftS3Access"
     iam = boto3.client("iam")
     response = iam.get_role(RoleName=role_name)
     return response["Role"]["Arn"]
-
-REDSHIFT_S3_IAM_ROLE = _get_s3_iam_role("GismartAnalyticsRedshiftS3Access")
-
 
 
 def _select_for_unload_string_literal(query: str) -> str:
@@ -45,6 +37,7 @@ def upload_file(
     file_path: str,
     schema: str,
     table: str,
+    role_name: str,
     *,
     separator: str = ",",
     bucket: str = "gismart-analytics",
@@ -72,6 +65,7 @@ def upload_file(
     else:
         raise ValueError(f"{os.path.basename(file_path)} file extension is not supported")
 
+    iam_role_arn = _get_s3_iam_role(role_name)
     table_name = f"{schema}.{table}"
     if columns:
         table_name += f" ({','.join(columns)})"
@@ -88,7 +82,7 @@ def upload_file(
     copy_sql = f"""
     COPY {table_name}
     FROM 's3://{bucket}/{s3_key}'
-    IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
+    IAM_ROLE '{iam_role_arn}'
     {copy_options_sql};
     """
 
@@ -138,6 +132,7 @@ def _unload_sql_for_query(
     separator: str,
     max_chunk_size_mb: int,
     delete_s3_before: bool,
+    role_name: str,
 ) -> str:
     if file_format.lower() == "csv":
         unload_options = [
@@ -158,10 +153,11 @@ def _unload_sql_for_query(
         raise ValueError(f"{file_format} file format is not supported")
     unload_options.append("CLEANPATH" if delete_s3_before else "ALLOWOVERWRITE")
     unload_opts_sql = "\n    ".join(unload_options)
+    iam_role_arn = _get_s3_iam_role(role_name)
     return f"""
     UNLOAD ('{unload_query}')
     TO 's3://{bucket}/{s3_prefix}'
-    IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
+    IAM_ROLE '{iam_role_arn}'
     {unload_opts_sql};
     """
 
@@ -234,6 +230,7 @@ def download_files(
     data_dir: Optional[str] = None,
     file_format: str = "csv",
     *,
+    role_name: str,
     separator: str = ",",
     bucket: str = "gismart-analytics",
     bucket_dir: str = "dwh/temp",
@@ -263,6 +260,7 @@ def download_files(
         separator,
         max_chunk_size_mb,
         delete_s3_before,
+        role_name,
     )
     _execute_unload_with_retries(unload_sql, secret_id, database, host, retries)
     s3 = connection.boto3.client("s3")
@@ -278,6 +276,7 @@ def upload_data(
     file_path: str,
     schema: str,
     table: str,
+    role_name: str,
     *,
     separator: str = ",",
     bucket: str = "gismart-analytics",
@@ -318,6 +317,7 @@ def upload_data(
         file_path=file_path,
         schema=schema,
         table=table,
+        role_name=role_name,
         separator=separator,
         bucket=bucket,
         bucket_dir=bucket_dir,
@@ -338,6 +338,7 @@ def download_data(
     query: str,
     file_format: str = "csv",
     *,
+    role_name: str,
     temp_dir: str = "/tmp",
     separator: str = ",",
     bucket: str = "gismart-analytics",
@@ -362,6 +363,7 @@ def download_data(
         query=query,
         data_dir=temp_dir,
         file_format=file_format,
+        role_name=role_name,
         separator=separator,
         bucket=bucket,
         bucket_dir=bucket_dir,
@@ -394,6 +396,7 @@ def unload_data(
     query: str,
     file_format: str = "csv",
     *,
+    role_name: str,
     bucket: str = "gismart-analytics",
     bucket_dir: str = "dwh/temp",
     delete_s3_before: bool = False,
@@ -411,10 +414,11 @@ def unload_data(
     s3_prefix = f"{bucket_dir}export_"
     unload_query = _select_for_unload_string_literal(query)
     unload_opts_sql = "\n    ".join(unload_options)
+    iam_role_arn = _get_s3_iam_role(role_name)
     unload_sql = f"""
     UNLOAD ('{unload_query}')
     TO 's3://{bucket}/{s3_prefix}'
-    IAM_ROLE '{REDSHIFT_S3_IAM_ROLE}'
+    IAM_ROLE '{iam_role_arn}'
     {unload_opts_sql};
     """
 
