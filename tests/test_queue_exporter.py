@@ -1,11 +1,12 @@
 import os
 import pytest
 import pandas as pd
+import os
 
 from bi_utils import queue_exporter
 
 
-REDSHIFT_S3_IAM_ROLE_NAME = "GismartAnalyticsRedshiftS3Access"
+REDSHIFT_S3_IAM_ROLE_NAME = os.environ["REDSHIFT_S3_IAM_ROLE_NAME"]
 
 
 def test_queue_exporter_alive():

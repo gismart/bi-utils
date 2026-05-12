@@ -15,7 +15,7 @@ Add `--upgrade` option to update existing package to a new version
 Specify package link in your `requirements.txt`:
 
 ```txt
-git+https://github.com/gismart/bi-utils@0.18.0#egg=bi-utils-gismart
+git+https://github.com/gismart/bi-utils@0.19.0#egg=bi-utils-gismart
 ```
 
 ### Usage
@@ -25,6 +25,7 @@ If you have your credentials on AWS add the following environment variables to u
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_DEFAULT_REGION`
+- `REDSHIFT_S3_IAM_ROLE_NAME`
 
 ### Running tests
 

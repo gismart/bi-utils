@@ -3,9 +3,10 @@ import pandas as pd
 import datetime as dt
 
 from bi_utils.aws import db
+import os
 
 
-REDSHIFT_S3_IAM_ROLE_NAME = "GismartAnalyticsRedshiftS3Access"
+REDSHIFT_S3_IAM_ROLE_NAME = os.environ["REDSHIFT_S3_IAM_ROLE_NAME"]
 
 table = "dqc_bi_utils_tests"
 schema = "data_quality_monitoring"
