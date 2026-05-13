@@ -24,7 +24,7 @@ def _get_s3_iam_role(role_name: str):
     return response["Role"]["Arn"]
 
 
-def _select_for_unload_string_literal(query: str) -> str:
+def _get_query_for_unload_string_literal(query: str) -> str:
     """Prepare SELECT text for embedding in Redshift UNLOAD ('...') (SQL string literal rules)."""
     q = query.strip().rstrip(";")
     quoted = adapt(q).getquoted().decode("utf-8")
@@ -251,7 +251,7 @@ def download_files(
         add_timestamp_dir=add_timestamp_dir,
     )
     s3_prefix = bucket_dir
-    unload_query = _select_for_unload_string_literal(query)
+    unload_query = _get_query_for_unload_string_literal(query)
     unload_sql = _unload_sql_for_query(
         unload_query,
         bucket,
@@ -412,7 +412,7 @@ def unload_data(
     if not bucket_dir.endswith("/"):
         bucket_dir += "/"
     s3_prefix = f"{bucket_dir}export_"
-    unload_query = _select_for_unload_string_literal(query)
+    unload_query = _get_query_for_unload_string_literal(query)
     unload_opts_sql = "\n    ".join(unload_options)
     iam_role_arn = _get_s3_iam_role(role_name)
     unload_sql = f"""
