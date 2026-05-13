@@ -68,6 +68,7 @@ class QueueExporter:
         /,
         file_path: str,
         *,
+        role_name: str,
         separator: str = ",",
         columns: Optional[Sequence] = None,
         s3_bucket: Optional[str] = None,
@@ -95,6 +96,7 @@ class QueueExporter:
         kwargs = {
             "df": df,
             "file_path": file_path,
+            "role_name": role_name,
             "separator": separator,
             "columns": columns,
             "s3_bucket": s3_bucket,
@@ -116,6 +118,7 @@ class QueueExporter:
         s3_bucket: str,
         s3_bucket_dir: str,
         *,
+        role_name: str,
         separator: str = ",",
         schema: Optional[str] = None,
         table: Optional[str] = None,
@@ -135,6 +138,7 @@ class QueueExporter:
         self._check_process()
         kwargs = {
             "file_path": file_path,
+            "role_name": role_name,
             "separator": separator,
             "s3_bucket": s3_bucket,
             "s3_bucket_dir": s3_bucket_dir,
@@ -152,6 +156,7 @@ class QueueExporter:
         df: pd.DataFrame,
         file_path: str,
         *,
+        role_name: str,
         separator: str = ",",
         columns: Optional[Sequence] = None,
         s3_bucket: Optional[str] = None,
@@ -185,6 +190,7 @@ class QueueExporter:
         if s3_bucket and s3_bucket_dir:
             self._export_file(
                 file_path,
+                role_name=role_name,
                 separator=separator,
                 s3_bucket=s3_bucket,
                 s3_bucket_dir=s3_bucket_dir,
@@ -212,6 +218,7 @@ class QueueExporter:
         s3_bucket: str,
         s3_bucket_dir: str,
         *,
+        role_name: str,
         separator: str = ",",
         schema: Optional[str] = None,
         table: Optional[str] = None,
@@ -222,8 +229,9 @@ class QueueExporter:
         if schema and table and (".csv" in file_path.lower() or ".parquet" in file_path.lower()):
             aws.db.upload_file(
                 file_path,
-                schema=schema,
-                table=table,
+                schema,
+                table,
+                role_name,
                 separator=separator,
                 bucket=s3_bucket,
                 bucket_dir=s3_bucket_dir,

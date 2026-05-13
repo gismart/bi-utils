@@ -3,7 +3,10 @@ import pandas as pd
 import datetime as dt
 
 from bi_utils.aws import db
+import os
 
+
+REDSHIFT_S3_IAM_ROLE_NAME = os.environ["REDSHIFT_S3_IAM_ROLE_NAME"]
 
 table = "dqc_bi_utils_tests"
 schema = "data_quality_monitoring"
@@ -32,7 +35,13 @@ def test_upload_download_delete(file_format):
     )
     data.predict_dt = pd.to_datetime(data.predict_dt)
     data.load_dttm = pd.to_datetime(data.load_dttm)
-    db.upload_data(data, f"/tmp/data.{file_format}", schema=schema, table=table)
+    db.upload_data(
+        data,
+        f"/tmp/data.{file_format}",
+        schema=schema,
+        table=table,
+        role_name=REDSHIFT_S3_IAM_ROLE_NAME,
+    )
     query = f"""
         SELECT text, predict_dt, version, load_dttm
         FROM {schema}.{table}
@@ -41,13 +50,18 @@ def test_upload_download_delete(file_format):
     downloaded_data = db.download_data(
         query,
         file_format=file_format,
+        role_name=REDSHIFT_S3_IAM_ROLE_NAME,
         parse_dates=["predict_dt", "load_dttm"],
         dtype={"version": "int"},
         remove_files=False,
     ).sort_values("predict_dt", ignore_index=True)
     assert downloaded_data.equals(data)
     db.delete(table, schema=schema, version=version)
-    downloaded_data = db.download_data(query, parse_dates=["predict_dt"])
+    downloaded_data = db.download_data(
+        query,
+        parse_dates=["predict_dt"],
+        role_name=REDSHIFT_S3_IAM_ROLE_NAME,
+    )
     assert downloaded_data.empty
 
 
@@ -70,7 +84,13 @@ def test_upload_update_download(file_format):
         }
     )
     data.predict_dt = pd.to_datetime(data.predict_dt)
-    db.upload_data(data, f"/tmp/data.{file_format}", schema=schema, table=table)
+    db.upload_data(
+        data,
+        f"/tmp/data.{file_format}",
+        schema=schema,
+        table=table,
+        role_name=REDSHIFT_S3_IAM_ROLE_NAME,
+    )
     params_set = {"version": new_version}
     params_where = {"text": "bye"}
     db.update(table, schema=schema, params_set=params_set, params_where=params_where)
@@ -82,6 +102,7 @@ def test_upload_update_download(file_format):
     downloaded_data = db.download_data(
         query,
         file_format=file_format,
+        role_name=REDSHIFT_S3_IAM_ROLE_NAME,
         parse_dates=["predict_dt", "load_dttm"],
         dtype={"version": "int"},
     ).sort_values("predict_dt")
@@ -106,6 +127,7 @@ def test_download_empty(file_format):
     downloaded_data = db.download_data(
         query,
         file_format=file_format,
+        role_name=REDSHIFT_S3_IAM_ROLE_NAME,
     )
     assert downloaded_data.empty
 

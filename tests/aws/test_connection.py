@@ -9,10 +9,11 @@ def test_get_creds():
 
 
 def test_get_redshift():
-    with connection.get_redshift() as redshift:
-        redshift.execute("SELECT 1")
-        result = list(redshift.to_dict())
-        assert len(result) == 1
+    with connection.get_redshift() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            result = cursor.fetchall()
+            assert len(result) == 1
 
 
 def test_create_engine():

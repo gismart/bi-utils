@@ -19,4 +19,4 @@ def setup_root_logger(name: str = "bi_utils", level: str = "info") -> None:
 
 
 setup_root_logger()
-setup_root_logger("locopy", level="warning")
+setup_root_logger("bi_utils", level="warning")
