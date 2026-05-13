@@ -411,7 +411,7 @@ def unload_data(
     )
     if not bucket_dir.endswith("/"):
         bucket_dir += "/"
-    s3_prefix = f"{bucket_dir}export_"
+    s3_prefix = f"{bucket_dir}"
     unload_query = _get_query_for_unload_string_literal(query)
     unload_opts_sql = "\n    ".join(unload_options)
     iam_role_arn = _get_s3_iam_role(role_name)
