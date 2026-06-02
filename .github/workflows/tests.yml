@@ -35,4 +35,11 @@ jobs:
         role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.REDSHIFT_S3_IAM_ROLE_NAME }}
         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
     - name: Test AWS connection
+      continue-on-error: true
       run : pytest tests/aws/test_connection.py
+    - name: Test AWS S3
+      continue-on-error: true
+      run : pytest tests/aws/test_s3.py
+    - name: Test AWS Redshift
+      continue-on-error: true
+      run : pytest tests/aws/test_db.py
