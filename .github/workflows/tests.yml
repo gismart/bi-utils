@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, docker]
     strategy:
       matrix:
         python-version: ['3.9', '3.10']
