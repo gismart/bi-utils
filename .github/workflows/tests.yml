@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: [self-hosted, docker]
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10']
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.REDSHIFT_S3_IAM_ROLE_NAME }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+    - name: Test AWS connection
+      continue-on-error: true
+      run : pytest tests/aws/test_connection.py
+    - name: Test AWS S3
+      continue-on-error: true
+      run : pytest tests/aws/test_s3.py
+    - name: Test AWS Redshift
+      continue-on-error: true
+      run : pytest tests/aws/test_db.py
