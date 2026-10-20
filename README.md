@@ -32,3 +32,7 @@ If you have your credentials on AWS add the following environment variables to u
 ```bash
 pytest
 ```
+
+### Release
+
+Always bump the version in `setup.py` (`version=...`) before a release.
